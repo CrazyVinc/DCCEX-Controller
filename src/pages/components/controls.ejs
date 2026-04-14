@@ -64,6 +64,8 @@
 <script>
   const forwardSpeed = document.getElementById("forwardSpeed");
   const reverseSpeed = document.getElementById("reverseSpeed");
+  const speedometer = document.getElementById("speedometer");
+
   const throttleByCab = {};
 
   function applyThrottleToControls(cab) {
@@ -82,10 +84,12 @@
 
   forwardSpeed.addEventListener("input", (e) => {
     reverseSpeed.value = 0;
+    speedometer.textContent = e.target.value;
     socket.emit('dcc:setThrottle', { cab: selectedTrain, speed: e.target.value, dir: 1 });
   });
   reverseSpeed.addEventListener("input", (e) => {
     forwardSpeed.value = 0;
+    speedometer.textContent = `-${e.target.value}`;
     socket.emit('dcc:setThrottle', { cab: selectedTrain, speed: e.target.value, dir: 0 })
   });
 
