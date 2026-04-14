@@ -1,0 +1,33 @@
+{
+  "name": "new-dcc-controller",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon",
+    "build:css": "tailwindcss -i ./src/styles/tailwind.css -o ./public/css/tailwind.css",
+    "dev:css": "tailwindcss -i ./src/styles/tailwind.css -o ./public/css/tailwind.css --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "ejs": "^5.0.2",
+    "express": "^4.22.1",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/cli": "^4.2.2",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.6.0",
+    "eslint": "^10.2.0",
+    "eslint-plugin-n": "^17.24.0",
+    "globals": "^17.5.0",
+    "nodemon": "^3.1.9",
+    "tailwindcss": "^4.2.2"
+  }
+}

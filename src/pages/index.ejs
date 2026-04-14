@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+    <head>
+        <%- include('layout/head.ejs') %>
+    </head>
+
+    <body class="min-h-screen flex flex-col">
+
+        <%- include('layout/header.ejs') %>
+        <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+            <section id="power" class="rounded-2xl border border-slate-700/80 bg-[#121a2f] p-4 shadow-[0_0_24px_rgba(56,189,248,0.1)]">
+                <div class="mb-3 border-b border-slate-700/80 pb-2">
+                    <span class="text-sm font-semibold uppercase tracking-wider text-amber-300">Track Power</span>
+                </div>
+                <%- include ('components/power.ejs') %>
+            </section>
+            <section id="controller" class="mt-5 rounded-2xl border border-slate-700/80 bg-[#121a2f] p-4 shadow-[0_0_24px_rgba(56,189,248,0.1)]">
+                <div class="mb-3 border-b border-slate-700/80 pb-2">
+                    <span class="text-sm font-semibold uppercase tracking-wider text-amber-300">Controls</span>
+                </div>
+                <% trains.forEach((train) => { %>
+                <button type="button" class="inline-flex cursor-pointer items-center overflow-hidden rounded-md border border-slate-700 bg-slate-800 text-sm shadow-sm transition-colors hover:border-slate-500" data-setcontrol="<%- train.DCC_ID %>">
+                    <span class="px-4 py-2 font-semibold text-slate-100">
+                        <%- train.Name %>
+                    </span>
+                    <span class="border-l border-slate-600 bg-slate-900/90 px-3 py-2 font-medium text-slate-300">
+                        <%- train.DCC_ID %>
+                    </span>
+                </button>
+                <% }) %>
+
+                <script>
+                    const controlButtons = document.querySelectorAll('[data-setcontrol]');
+                    selectedTrain = controlButtons.length > 0
+                        ? controlButtons[0].getAttribute('data-setcontrol')
+                        : null;
+
+                    controlButtons.forEach(trainbtn => {
+                        trainbtn.addEventListener("click", () => {
+                            selectedTrain = trainbtn.getAttribute('data-setcontrol');
+                        });
+                    });
+                </script>
+
+                <div class="flex flex-row gap-8">
+                    <div class="w-1/2">
+                        <%- include('components/controls.ejs') %>
+                    </div>
+                    <div class="w-1/2">
+                        <%- include('components/functions.ejs', { train: trains[0], size: "lg", layout: "portrait" }) %>
+                    </div>
+                </div>
+                <button type="button" class="mt-5 w-full cursor-pointer rounded-full border-0 bg-linear-to-r from-[#F43F5E] to-[#E11D48] py-2.5 font-sans text-xl font-bold uppercase tracking-wide text-slate-50 shadow-[0_0_24px_rgba(244,63,94,0.42),0_4px_14px_rgba(15,23,42,0.35)] transition-[box-shadow,transform] duration-300 hover:shadow-[0_0_32px_rgba(244,63,94,0.5),0_4px_14px_rgba(15,23,42,0.4)] active:translate-y-px active:shadow-[0_0_18px_rgba(244,63,94,0.35),0_2px_8px_rgba(15,23,42,0.3)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-300/50 sm:py-3 sm:text-2xl">
+                    stop
+                </button>
+            </section>
+
+            <section id="test" class="rounded-2xl border border-slate-700/80 bg-[#121a2f] p-4 shadow-[0_0_24px_rgba(56,189,248,0.1)]">
+                <div class="mb-3 border-b border-slate-700/80 pb-2">
+                    <span class="text-sm font-semibold uppercase tracking-wider text-amber-300">Test</span>
+                </div>
+
+                <div class="flex flex-col gap-3 max-w-sm">
+                    <input type="text" id="testInput" class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Type DCC command...">
+
+                    <button id="submitBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 active:bg-blue-800 transition">
+                        Submit
+                    </button>
+
+                    <div id="output" class="font-medium text-slate-200"></div>
+                </div>
+
+                <script>
+                    const testInput = document.getElementById("testInput");
+                    const output = document.getElementById("output");
+                    const btn = document.getElementById("submitBtn");
+
+                    const sendTestCommand = () => {
+                        const command = testInput.value.trim();
+                        if (!command) {
+                            return;
+                        }
+
+                        output.textContent = "Sending...";
+                        socket.emit("dcc:send", command);
+                    };
+
+                    btn.addEventListener("click", sendTestCommand);
+                    testInput.addEventListener("keydown", (event) => {
+                        if (event.key === "Enter") {
+                            sendTestCommand();
+                        }
+                    });
+
+                    socket.on("dcc:message", ({ message }) => {
+                        output.textContent = message;
+                    });
+                </script>
+            </section>
+        </main>
+        <%- include('layout/footer.ejs') %>
+    </body>
+
+</html>

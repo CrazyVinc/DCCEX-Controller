@@ -1,0 +1,24 @@
+<%
+const panelSize = typeof size === 'string' ? size : 'md';
+const panelLayout = typeof layout === 'string' ? layout : 'portrait';
+const hasTrains = typeof trains !== 'undefined' && Array.isArray(trains) && trains.length > 0;
+const hasSingleTrain = typeof train !== 'undefined' && train;
+const selectedTrain = hasSingleTrain ? train : (hasTrains ? trains[0] : null);
+const functionNumbers = selectedTrain && Array.isArray(selectedTrain.Functions) ? selectedTrain.Functions.map((fn) => String(fn).trim()).filter((fn) => fn.length > 0) : [];
+const isPortrait = panelLayout === 'portrait';
+const buttonPadding = isPortrait
+    ? (panelSize === 'lg' ? 'px-3.5 py-2' : 'px-3 py-1.5')
+    : 'px-2.5 py-1.5';
+const buttonTextSize = isPortrait
+    ? (panelSize === 'lg' ? 'text-sm' : 'text-xs')
+    : 'text-xs';
+%>
+<div class="mt-4 <%= isPortrait ? 'grid grid-cols-2 gap-2.5' : 'flex w-full flex-nowrap gap-2 overflow-x-auto pb-1' %>" data-layout="<%= panelLayout %>" data-size="<%= panelSize %>">
+    <% functionNumbers.forEach((fn) => { %>
+        <button type="button"
+            class="inline-flex <%= isPortrait ? 'min-w-14 rounded-lg' : 'shrink-0 rounded-md' %> cursor-pointer items-center justify-center border border-amber-500/50 bg-slate-900 font-semibold tracking-wide text-amber-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:border-amber-300 hover:bg-slate-800/95 <%= buttonPadding %> <%= buttonTextSize %>"
+            data-function-number="<%= fn %>" data-train-id="<%= selectedTrain ? selectedTrain.DCC_ID : '' %>">
+            <%= String(fn).toUpperCase().startsWith('F') ? fn : `F${fn}` %>
+        </button>
+    <% }) %>
+</div>

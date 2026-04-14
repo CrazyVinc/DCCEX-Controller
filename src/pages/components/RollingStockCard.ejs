@@ -1,0 +1,30 @@
+<div class="bg-[#1c2128] border border-[#30363d] rounded-xl p-5 flex justify-between hover:border-[#ff9d004d]">
+    <div class="space-y-2">
+        <h2 class="text-[#ff9d00] text-xl font-bold tracking-wide"><%= train.Name %></h2>
+
+        <div class="text-sm space-y-1">
+            <p>
+                <span class="text-gray-500">DCC</span>
+                <span class="font-semibold text-gray-200"><%= train.DCC_ID %></span>
+            </p>
+            <p>
+                <span class="text-gray-500">Length</span>
+                <span class="font-semibold text-gray-200"><%= train.Length %> mm</span>
+            </p>
+            <p>
+                <span class="text-gray-500">Calibrated speed (step <%= train.Speed && train.Speed.Step != null ? train.Speed.Step : '—' %>)</span>
+                <span class="font-semibold text-gray-200"><%= train.Speed && train.Speed.calculated != null ? Number(train.Speed.calculated).toFixed(2) : '—' %> mm/s</span>
+            </p>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mt-4">
+    
+            <%- include('functions.ejs', { train, size: "md", layout: "horizontal" }) %>
+        </div>
+    </div>
+
+    <div
+        class="w-24 h-32 flex-shrink-0 border-2 border-dashed border-[#30363d] rounded-lg flex items-center justify-center ml-4">
+        <span class="text-[10px] text-gray-600 italic">No photo</span>
+    </div>
+</div>

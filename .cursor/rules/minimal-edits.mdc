@@ -1,0 +1,12 @@
+---
+description: Keep edits minimal; do not refactor unchanged code
+alwaysApply: true
+---
+
+# Minimal edits only
+
+- If existing code already works for the requested behavior, do **not** change it just to make it "better."
+- Do **not** refactor or rewrite unrelated code for style, architecture, or personal preference.
+- Only edit code that is required to complete the user's explicit request or to fix breakage introduced by that change.
+- Favor the simplest and most human-readable solution that matches the existing local style.
+- Preserve existing naming, structure, and patterns unless the user explicitly asks for a broader refactor.
