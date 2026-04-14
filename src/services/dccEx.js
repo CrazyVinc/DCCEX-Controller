@@ -32,6 +32,7 @@ class DccExClient extends EventEmitter {
         // --- STATE ---
         this.power = null; // null = unknown, true = on, false = off
         this.enabledFunctionsByCab = {};
+        this.throttleByCab = {};
         this.startupCabs = this._normalizeCabs(startupCabs);
     }
 
@@ -146,12 +147,17 @@ class DccExClient extends EventEmitter {
      * Parse DCC-EX messages
      */
     _parseMessage(msg) {
-        // Example: <p1> or <p0>
-        if (msg.startsWith('<p')) {
-            this._setPower(msg.includes('1'));
+        const normalized = typeof msg === 'string' ? msg.trim() : '';
+        if (!normalized) {
+            return;
         }
 
-        this._trySyncFunctionFromLocoStatus(msg);
+        // Example: <p1> or <p0>
+        if (normalized.startsWith('<p')) {
+            this._setPower(normalized.includes('1'));
+        }
+
+        this._trySyncFunctionFromLocoStatus(normalized);
 
         // You can extend here later:
         // turnout states, loco feedback, etc.
@@ -217,6 +223,23 @@ class DccExClient extends EventEmitter {
     }
 
     /**
+     * Get cached throttle state for a cab.
+     * @param {number} cab
+     * @returns {{speed:number, dir:number}|null}
+     */
+    getThrottle(cab) {
+        return this.throttleByCab[cab] || null;
+    }
+
+    /**
+     * Get cached throttle for all known cabs.
+     * @returns {Object<number, {speed:number, dir:number}>}
+     */
+    getAllThrottle() {
+        return this.throttleByCab;
+    }
+
+    /**
      * DCC-EX function command: F {cab} {fn} {0|1}
      * @param {string} trimmed
      */
@@ -243,10 +266,16 @@ class DccExClient extends EventEmitter {
         }
 
         const cab = Number(m[1]);
+        const rawSpeed = Number(m[2]);
+        const rawDirection = Number(m[3]);
         const functionBitmask = Number(m[4]);
         if (!Number.isInteger(cab) || cab < 0 || !Number.isInteger(functionBitmask) || functionBitmask < 0) {
             return;
         }
+
+        const speed = Number.isFinite(rawSpeed) ? Math.max(0, Math.min(126, Math.abs(rawSpeed))) : 0;
+        const direction = rawDirection ^ 1;
+        this._setThrottleState(cab, speed, direction);
 
         // Rebuild all known states from the incoming bitmask snapshot.
         const nextStates = {};
@@ -258,6 +287,23 @@ class DccExClient extends EventEmitter {
         for (let fn = 0; fn <= 31; fn += 1) {
             this.emit('function', { cab, fn, on: nextStates[fn] });
         }
+    }
+
+    /**
+     * @param {number} cab
+     * @param {number} speed
+     * @param {number} dir - 0 reverse, 1 forward
+     */
+    _setThrottleState(cab, speed, dir) {
+        const normalizedSpeed = Math.max(0, Math.min(126, Math.round(Number(speed) || 0)));
+        const normalizedDirection = Number(dir) === 0 ? 0 : 1;
+        const prev = this.throttleByCab[cab];
+        if (prev && prev.speed === normalizedSpeed && prev.dir === normalizedDirection) {
+            return;
+        }
+        const next = { speed: normalizedSpeed, dir: normalizedDirection };
+        this.throttleByCab[cab] = next;
+        this.emit('throttle', { cab, ...next });
     }
 
     /**
@@ -300,6 +346,7 @@ class DccExClient extends EventEmitter {
         }
 
         const clampedSpeed = Math.max(0, Math.min(126, Math.round(speedStep)));
+        this._setThrottleState(cabNumber, clampedSpeed, Number(direction) === 0 ? 0 : 1);
         // DCC-EX: lowercase `t` = throttle; uppercase `T` = turnout (same as turnoutThrow/Close).
         this.send(`t ${cabNumber} ${speed} ${direction ^ 1}`);
     }

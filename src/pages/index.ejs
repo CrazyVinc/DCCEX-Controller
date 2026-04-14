@@ -46,6 +46,9 @@
                         if (selectedBtn) {
                             selectedBtn.classList.add(...activeClasses);
                         }
+                        document.dispatchEvent(new CustomEvent('selectedTrain:changed', {
+                            detail: { cab: selectedTrain }
+                        }));
                    
                     }
 
@@ -60,6 +63,9 @@
 
                             // Add classes to the clicked button
                             trainbtn.classList.add(...activeClasses);
+                            document.dispatchEvent(new CustomEvent('selectedTrain:changed', {
+                                detail: { cab: selectedTrain }
+                            }));
                         });
                     });
                 </script>

@@ -31,6 +31,10 @@ export function setupDccExSocket(socketService, dccExClient = defaultDccEx, roll
     socketService.emit('dcc:function', payload);
   });
 
+  dccExClient.on('throttle', (payload) => {
+    socketService.emit('dcc:throttle', payload);
+  });
+
   dccExClient.on('message', (message) => {
     socketService.emit('dcc:message', { message });
   });
@@ -39,6 +43,7 @@ export function setupDccExSocket(socketService, dccExClient = defaultDccEx, roll
     socket.emit('dcc:status', {
       connected: dccExClient.connected,
       power: dccExClient.getPower(),
+      throttleByCab: dccExClient.getAllThrottle(),
       rollingStock,
     });
 
@@ -46,6 +51,7 @@ export function setupDccExSocket(socketService, dccExClient = defaultDccEx, roll
       socket.emit('dcc:status', {
         connected: dccExClient.connected,
         power: dccExClient.getPower(),
+        throttleByCab: dccExClient.getAllThrottle(),
         rollingStock,
       });
     });
