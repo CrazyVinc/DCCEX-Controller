@@ -1,0 +1,16 @@
+---
+description: Disallow backward compatibility and legacy support by default
+alwaysApply: true
+---
+
+# No Backward Compatibility By Default
+
+- Do not add backward compatibility paths, fallback behavior, shims, or legacy branches.
+- Do not preserve old APIs, payload formats, or deprecated behavior unless explicitly requested by the user in this chat.
+- Prefer replacing old behavior with the single current behavior instead of supporting both.
+- If a change would normally require "legacy support", stop and ask the user for explicit approval first.
+
+## Examples
+
+- Bad: `if (newPayload) { ... } else { /* old payload support */ ... }`
+- Good: Handle only `newPayload` and fail clearly for invalid/old input.

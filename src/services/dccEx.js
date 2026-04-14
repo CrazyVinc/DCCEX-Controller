@@ -12,7 +12,7 @@ class DccExClient extends EventEmitter {
      * @param {number} [options.port]
      * @param {boolean} [options.autoReconnect=true]
      */
-    constructor({ host, port, autoReconnect = true }) {
+    constructor({ host, port, autoReconnect = true, startupCabs = [] }) {
         super();
 
         this.host = host;
@@ -32,6 +32,7 @@ class DccExClient extends EventEmitter {
         // --- STATE ---
         this.power = null; // null = unknown, true = on, false = off
         this.enabledFunctionsByCab = {};
+        this.startupCabs = this._normalizeCabs(startupCabs);
     }
 
     /**
@@ -48,6 +49,7 @@ class DccExClient extends EventEmitter {
 
             // Request full status snapshot
             this.send('s');
+            this._requestStartupLocoStatus();
 
             this._flushQueue();
         });
@@ -149,8 +151,41 @@ class DccExClient extends EventEmitter {
             this._setPower(msg.includes('1'));
         }
 
+        this._trySyncFunctionFromLocoStatus(msg);
+
         // You can extend here later:
         // turnout states, loco feedback, etc.
+    }
+
+    /**
+     * @param {Array<number|string>} cabs
+     */
+    setStartupCabs(cabs = []) {
+        this.startupCabs = this._normalizeCabs(cabs);
+    }
+
+    /**
+     * @param {Array<number|string>} cabs
+     * @returns {number[]}
+     */
+    _normalizeCabs(cabs) {
+        if (!Array.isArray(cabs)) {
+            return [];
+        }
+        return [...new Set(
+            cabs
+                .map((cab) => Number(cab))
+                .filter((cab) => Number.isInteger(cab) && cab >= 0)
+        )];
+    }
+
+    _requestStartupLocoStatus() {
+        if (this.startupCabs.length === 0) {
+            return;
+        }
+        for (const cab of this.startupCabs) {
+            this.send(`t ${cab}`);
+        }
     }
 
     /**
@@ -197,6 +232,35 @@ class DccExClient extends EventEmitter {
     }
 
     /**
+     * Sync from loco status response when function bitmask is present.
+     * Typical format includes cab + speed + dir + function bitmask.
+     * @param {string} msg
+     */
+    _trySyncFunctionFromLocoStatus(msg) {
+        const m = msg.match(/^<\s*[lL]\s+(\d+)\s+(-?\d+)\s+([01])\s+(\d+)[^>]*>$/);
+        if (!m) {
+            return;
+        }
+
+        const cab = Number(m[1]);
+        const functionBitmask = Number(m[4]);
+        if (!Number.isInteger(cab) || cab < 0 || !Number.isInteger(functionBitmask) || functionBitmask < 0) {
+            return;
+        }
+
+        // Rebuild all known states from the incoming bitmask snapshot.
+        const nextStates = {};
+        for (let fn = 0; fn <= 31; fn += 1) {
+            nextStates[fn] = ((functionBitmask >> fn) & 1) === 1;
+        }
+
+        this.enabledFunctionsByCab[cab] = nextStates;
+        for (let fn = 0; fn <= 31; fn += 1) {
+            this.emit('function', { cab, fn, on: nextStates[fn] });
+        }
+    }
+
+    /**
      * @param {number} cab
      * @param {number} fn
      * @param {boolean} on
@@ -223,10 +287,9 @@ class DccExClient extends EventEmitter {
      * @param {number} speed - 0-126
      * @param {number} dir - 0 = reverse, 1 = forward
      */
-    setThrottle(cab, speed, dir = 1) {
+    setThrottle(cab, speed, direction = 1) {
         const cabNumber = Number(cab);
         const speedStep = Number(speed);
-        const direction = Number(dir) === 0 ? 0 : 1;
 
         if (!Number.isInteger(cabNumber) || cabNumber < 0) {
             return;
@@ -238,7 +301,7 @@ class DccExClient extends EventEmitter {
 
         const clampedSpeed = Math.max(0, Math.min(126, Math.round(speedStep)));
         // DCC-EX: lowercase `t` = throttle; uppercase `T` = turnout (same as turnoutThrow/Close).
-        this.send(`t ${cabNumber} ${clampedSpeed} ${direction}`);
+        this.send(`t ${cabNumber} ${speed} ${direction ^ 1}`);
     }
 
     /**
@@ -281,18 +344,27 @@ class DccExClient extends EventEmitter {
     }
 
     /**
-     * Set function (lights, sound, etc.)
+     * Toggle function (lights, sound, etc.)
      * @param {number} cab
      * @param {number} fn
-     * @param {number} value (0/1)
      */
-    setFunction(cab, fn, value) {
-        const bit = Number(value) === 1 ? 1 : 0;
-        this.send(`F ${cab} ${fn} ${bit}`);
+    toggleFunction(cab, fn) {
+        const cabNumber = Number(cab);
+        const fnToken = String(fn).trim();
+        const fnNumber = Number(fnToken.toUpperCase().startsWith('F') ? fnToken.slice(1) : fnToken);
+
+        if (!Number.isInteger(cabNumber) || cabNumber < 0 || !Number.isInteger(fnNumber) || fnNumber < 0) {
+            return;
+        }
+
+        const currentState = this.getEnabledFunctions(cabNumber)[fnNumber];
+        const bit = currentState ? 0 : 1;
+
+        this.send(`F ${cabNumber} ${fnNumber} ${bit}`);
     }
 }
 
 export default new DccExClient({
-    host: 'localhost',
+    host: process.env.DCCHost || 'localhost',
     port: 2560
 });

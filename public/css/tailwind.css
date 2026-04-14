@@ -11,6 +11,8 @@
     --color-red-950: oklch(25.8% 0.092 26.042);
     --color-amber-300: oklch(87.9% 0.169 91.605);
     --color-amber-500: oklch(76.9% 0.188 70.08);
+    --color-green-300: oklch(87.1% 0.15 154.449);
+    --color-green-500: oklch(72.3% 0.219 149.579);
     --color-emerald-300: oklch(84.5% 0.143 164.978);
     --color-emerald-400: oklch(76.5% 0.177 163.223);
     --color-emerald-500: oklch(69.6% 0.17 162.48);
@@ -513,6 +515,10 @@
   .rounded-xl {
     border-radius: var(--radius-xl);
   }
+  .\!border-2 {
+    border-style: var(--tw-border-style) !important;
+    border-width: 2px !important;
+  }
   .border {
     border-style: var(--tw-border-style);
     border-width: 1px;
@@ -544,6 +550,9 @@
   .border-dashed {
     --tw-border-style: dashed;
     border-style: dashed;
+  }
+  .\!border-amber-300 {
+    border-color: var(--color-amber-300) !important;
   }
   .border-\[\#00c896\] {
     border-color: #00c896;
@@ -580,6 +589,9 @@
   }
   .border-gray-300 {
     border-color: var(--color-gray-300);
+  }
+  .border-green-500 {
+    border-color: var(--color-green-500);
   }
   .border-red-500 {
     border-color: var(--color-red-500);
@@ -878,6 +890,9 @@
   .text-gray-600 {
     color: var(--color-gray-600);
   }
+  .text-green-300 {
+    color: var(--color-green-300);
+  }
   .text-red-500 {
     color: var(--color-red-500);
   }
@@ -1047,6 +1062,13 @@
     &:hover {
       @media (hover: hover) {
         border-color: var(--color-amber-300);
+      }
+    }
+  }
+  .hover\:border-green-300 {
+    &:hover {
+      @media (hover: hover) {
+        border-color: var(--color-green-300);
       }
     }
   }

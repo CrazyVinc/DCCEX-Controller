@@ -15,10 +15,32 @@ const buttonTextSize = isPortrait
 %>
 <div class="mt-4 <%= isPortrait ? 'grid grid-cols-2 gap-2.5' : 'flex w-full flex-nowrap gap-2 overflow-x-auto pb-1' %>" data-layout="<%= panelLayout %>" data-size="<%= panelSize %>">
     <% functionNumbers.forEach((fn) => { %>
-        <button type="button"
-            class="inline-flex <%= isPortrait ? 'min-w-14 rounded-lg' : 'shrink-0 rounded-md' %> cursor-pointer items-center justify-center border border-amber-500/50 bg-slate-900 font-semibold tracking-wide text-amber-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:border-amber-300 hover:bg-slate-800/95 <%= buttonPadding %> <%= buttonTextSize %>"
-            data-function-number="<%= fn %>" data-train-id="<%= selectedTrain ? selectedTrain.DCC_ID : '' %>">
-            <%= String(fn).toUpperCase().startsWith('F') ? fn : `F${fn}` %>
-        </button>
+    <button type="button" class="inline-flex <%= isPortrait ? 'min-w-14 rounded-lg' : 'shrink-0 rounded-md' %> cursor-pointer items-center justify-center border border-amber-500/50 bg-slate-900 font-semibold tracking-wide text-amber-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:border-amber-300 hover:bg-slate-800/95 <%= buttonPadding %> <%= buttonTextSize %>" data-function-number="<%= fn %>" data-train-id="<%= selectedTrain ? selectedTrain.DCC_ID : '' %>">
+        <%= String(fn).toUpperCase().startsWith('F') ? fn : `F${fn}` %>
+    </button>
     <% }) %>
 </div>
+
+
+<script>
+    const functionButtons = document.querySelectorAll('button[data-function-number][data-train-id]');
+
+    functionButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const functionNumber = button.dataset.functionNumber;
+            const trainId = button.dataset.trainId;
+            const isOn = button.dataset.isOn === 'true';
+            const nextState = !isOn;
+
+            button.dataset.isOn = String(nextState);
+            button.classList.toggle('border-green-500', nextState);
+            button.classList.toggle('text-green-300', nextState);
+            button.classList.toggle('hover:border-green-300', nextState);
+            button.classList.toggle('border-amber-500/50', !nextState);
+            button.classList.toggle('text-amber-300', !nextState);
+            button.classList.toggle('hover:border-amber-300', !nextState);
+
+            socket.emit('dcc:function', { cab: trainId, function: functionNumber });
+        });
+    });
+</script>

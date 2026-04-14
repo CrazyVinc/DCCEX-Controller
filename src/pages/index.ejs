@@ -32,13 +32,34 @@
 
                 <script>
                     const controlButtons = document.querySelectorAll('[data-setcontrol]');
-                    selectedTrain = controlButtons.length > 0
+
+                    const activeClasses = ['!border-2', '!border-amber-300'];
+
+                    // 1. Initial State
+                    selectedTrain = localStorage.getItem("selectedTrain") || controlButtons.length > 0
                         ? controlButtons[0].getAttribute('data-setcontrol')
                         : null;
 
+                    // Set the active button color based on the selected train
+                    if (controlButtons.length > 0) {
+                        const selectedBtn = Array.from(controlButtons).find(btn => btn.getAttribute('data-setcontrol') === selectedTrain);
+                        if (selectedBtn) {
+                            selectedBtn.classList.add(...activeClasses);
+                        }
+                   
+                    }
+
+                    // 2. Click Logic
                     controlButtons.forEach(trainbtn => {
                         trainbtn.addEventListener("click", () => {
                             selectedTrain = trainbtn.getAttribute('data-setcontrol');
+                            localStorage.setItem("selectedTrain", selectedTrain);
+
+                            // Remove classes from all buttons
+                            controlButtons.forEach(btn => btn.classList.remove(...activeClasses));
+
+                            // Add classes to the clicked button
+                            trainbtn.classList.add(...activeClasses);
                         });
                     });
                 </script>
@@ -51,7 +72,7 @@
                         <%- include('components/functions.ejs', { train: trains[0], size: "lg", layout: "portrait" }) %>
                     </div>
                 </div>
-                <button type="button" class="mt-5 w-full cursor-pointer rounded-full border-0 bg-linear-to-r from-[#F43F5E] to-[#E11D48] py-2.5 font-sans text-xl font-bold uppercase tracking-wide text-slate-50 shadow-[0_0_24px_rgba(244,63,94,0.42),0_4px_14px_rgba(15,23,42,0.35)] transition-[box-shadow,transform] duration-300 hover:shadow-[0_0_32px_rgba(244,63,94,0.5),0_4px_14px_rgba(15,23,42,0.4)] active:translate-y-px active:shadow-[0_0_18px_rgba(244,63,94,0.35),0_2px_8px_rgba(15,23,42,0.3)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-300/50 sm:py-3 sm:text-2xl">
+                <button id="dcc-stop" type="button" class="mt-5 w-full cursor-pointer rounded-full border-0 bg-linear-to-r from-[#F43F5E] to-[#E11D48] py-2.5 font-sans text-xl font-bold uppercase tracking-wide text-slate-50 shadow-[0_0_24px_rgba(244,63,94,0.42),0_4px_14px_rgba(15,23,42,0.35)] transition-[box-shadow,transform] duration-300 hover:shadow-[0_0_32px_rgba(244,63,94,0.5),0_4px_14px_rgba(15,23,42,0.4)] active:translate-y-px active:shadow-[0_0_18px_rgba(244,63,94,0.35),0_2px_8px_rgba(15,23,42,0.3)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-300/50 sm:py-3 sm:text-2xl">
                     stop
                 </button>
             </section>

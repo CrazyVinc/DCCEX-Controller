@@ -10,6 +10,11 @@ export function setupDccExSocket(socketService, dccExClient = defaultDccEx, roll
     throw new Error('setupDccExSocket requires socketService');
   }
 
+  const startupCabs = Array.isArray(rollingStock?.trains)
+    ? rollingStock.trains.map((train) => train?.DCC_ID)
+    : [];
+  dccExClient.setStartupCabs(startupCabs);
+
   dccExClient.on('connect', () => {
     socketService.emit('dcc:connected');
   });
@@ -57,6 +62,10 @@ export function setupDccExSocket(socketService, dccExClient = defaultDccEx, roll
 
     socket.on('dcc:power:on', () => {
       dccExClient.powerOn();
+    });
+
+    socket.on('dcc:function', (payload) => {
+      dccExClient.toggleFunction(payload.cab, payload.function);
     });
 
     socket.on('dcc:power:off', () => {
