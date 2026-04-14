@@ -7,7 +7,7 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "npm run build:css && node src/index.js",
     "dev": "nodemon",
     "build:css": "tailwindcss -i ./src/styles/tailwind.css -o ./public/css/tailwind.css",
     "dev:css": "tailwindcss -i ./src/styles/tailwind.css -o ./public/css/tailwind.css --watch",

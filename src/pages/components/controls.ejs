@@ -83,22 +83,23 @@
   }
 
   forwardSpeed.addEventListener("input", (e) => {
+    socket.emit('dcc:setThrottle', { cab: selectedTrain, speed: e.target.value, dir: 1 });
     reverseSpeed.value = 0;
     speedometer.textContent = e.target.value;
-    socket.emit('dcc:setThrottle', { cab: selectedTrain, speed: e.target.value, dir: 1 });
   });
   reverseSpeed.addEventListener("input", (e) => {
+    socket.emit('dcc:setThrottle', { cab: selectedTrain, speed: e.target.value, dir: 0 })
     forwardSpeed.value = 0;
     speedometer.textContent = `-${e.target.value}`;
-    socket.emit('dcc:setThrottle', { cab: selectedTrain, speed: e.target.value, dir: 0 })
   });
 
   document.addEventListener("DOMContentLoaded", () => {
     const stopBtn = document.getElementById("dcc-stop");
     stopBtn.addEventListener("click", () => {
+      socket.emit('dcc:setThrottle', { cab: selectedTrain, speed: 0, dir: 0 });
       forwardSpeed.value = 0;
       reverseSpeed.value = 0;
-      socket.emit('dcc:setThrottle', { cab: selectedTrain, speed: 0, dir: 0 });
+      speedometer.textContent = "0";
     });
   });
 
