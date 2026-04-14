@@ -5,5 +5,5 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
-let selectedTrain;
+let selectedTrain = localStorage.getItem("selectedTrain") || null;
 </script>

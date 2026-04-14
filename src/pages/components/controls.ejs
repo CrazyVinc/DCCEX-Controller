@@ -69,17 +69,16 @@
   const throttleByCab = {};
 
   function applyThrottleToControls(cab) {
-    if (!cab) {
-      return;
-    }
-    const throttle = throttleByCab[String(cab)];
-    if (!throttle) {
-      return;
-    }
+    if (!cab) return;
+
+    const throttle = throttleByCab[String(cab)] || { speed: 0, dir: 0 };
     const speed = Number(throttle.speed) || 0;
     const dir = Number(throttle.dir) === 0 ? 0 : 1;
     forwardSpeed.value = dir === 1 ? speed : 0;
     reverseSpeed.value = dir === 0 ? speed : 0;
+    if (speedometer) {
+      speedometer.textContent = dir === 0 && speed > 0 ? `-${speed}` : String(speed);
+    }
   }
 
   forwardSpeed.addEventListener("input", (e) => {
@@ -112,9 +111,8 @@
   });
 
   socket.on('dcc:throttle', ({ cab, speed, dir }) => {
-    if (cab === undefined || cab === null) {
-      return;
-    }
+    if (cab === undefined || cab === null) return;
+
     throttleByCab[String(cab)] = { speed, dir };
     if (String(cab) === String(selectedTrain)) {
       applyThrottleToControls(selectedTrain);
