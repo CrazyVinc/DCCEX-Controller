@@ -5,8 +5,9 @@ alwaysApply: true
 
 # Async-first code
 
-- Do **not** use synchronous blocking APIs. Prefer asynchronous equivalents everywhere they exist.
-- In Node.js: avoid `*Sync` methods (`readFileSync`, `writeFileSync`, `execSync`, `spawnSync`, etc.). Use `fs.promises`, `util.promisify`, or callback APIs wrapped in `new Promise`, and expose `async` functions.
+- Runtime code must not use synchronous blocking APIs. Prefer asynchronous equivalents everywhere they exist.
+- Startup/bootstrap processes may use synchronous APIs when they run once before serving requests.
+- In Node.js runtime paths, avoid `*Sync` methods (`readFileSync`, `writeFileSync`, `execSync`, `spawnSync`, etc.). Use `fs.promises`, `util.promisify`, or callback APIs wrapped in `new Promise`, and expose `async` functions.
 - For CPU-heavy work that would block the event loop, offload to `worker_threads` or a child process with async messaging—not a synchronous loop on the main thread.
 - When adding new functions that perform I/O or may wait, make them `async` and return Promises rather than blocking until completion.
 

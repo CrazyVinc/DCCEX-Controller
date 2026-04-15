@@ -1,0 +1,28 @@
+---
+description: Prefer direct JavaScript over over-defensive guards
+alwaysApply: true
+---
+
+# Prefer Direct JavaScript
+
+- Do not add defensive guards for values that are expected by normal control flow.
+- Write the straightforward version first when the data shape is already required by the feature.
+- Avoid stacking optional chaining, `Array.isArray`, fallback arrays/objects, or nullish defaults just to "be safe."
+
+## Default Approach
+
+- Prefer short, direct code that is easy to read in one pass.
+- If invalid input is possible and important, fail clearly instead of silently masking it.
+- Do not add TypeScript-like runtime protection patterns to regular JavaScript unless explicitly requested.
+
+## Example
+
+```javascript
+// Avoid over-protective style
+const startupCabs = Array.isArray(rollingStock?.trains)
+  ? rollingStock.trains.map((train) => train?.DCC_ID)
+  : [];
+
+// Prefer direct and clear style
+const startupCabs = rollingStock.trains.map((train) => train.DCC_ID);
+```

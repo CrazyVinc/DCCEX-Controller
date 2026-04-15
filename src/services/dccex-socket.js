@@ -10,9 +10,7 @@ export function setupDccExSocket(socketService, dccExClient = defaultDccEx, roll
     throw new Error('setupDccExSocket requires socketService');
   }
 
-  const startupCabs = Array.isArray(rollingStock?.trains)
-    ? rollingStock.trains.map((train) => train?.DCC_ID)
-    : [];
+  const startupCabs = rollingStock.trains.map(train => train.DCC_ID);
   dccExClient.setStartupCabs(startupCabs);
 
   dccExClient.on('connect', () => {

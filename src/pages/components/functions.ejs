@@ -1,23 +1,18 @@
 <%
 const panelSize = typeof size === 'string' ? size : 'md';
 const panelLayout = typeof layout === 'string' ? layout : 'portrait';
-const hasTrains = typeof trains !== 'undefined' && Array.isArray(trains) && trains.length > 0;
-const hasSingleTrain = typeof train !== 'undefined' && train;
-const panelTrain = hasSingleTrain ? train : (hasTrains ? trains[0] : null);
-const functionNumbers = panelTrain && Array.isArray(panelTrain.Functions) ? panelTrain.Functions.map((fn) => String(fn).trim()).filter((fn) => fn.length > 0) : [];
+const hasTrains = trains.length > 0;
+const panelTrain = trains[0];
+const functionNumbers = panelTrain.Functions.map((fn) => String(fn).trim()).filter((fn) => fn.length > 0);
 const isPortrait = panelLayout === 'portrait';
-const buttonPadding = isPortrait
-    ? (panelSize === 'lg' ? 'px-3.5 py-2' : 'px-3 py-1.5')
-    : 'px-2.5 py-1.5';
-const buttonTextSize = isPortrait
-    ? (panelSize === 'lg' ? 'text-sm' : 'text-xs')
-    : 'text-xs';
-const trainsPayload = (hasTrains ? trains : (panelTrain ? [panelTrain] : [])).map((t) => ({
+const buttonPadding = isPortrait ? (panelSize === 'lg' ? 'px-3.5 py-2' : 'px-3 py-1.5') : 'px-2.5 py-1.5';
+const buttonTextSize = isPortrait ? (panelSize === 'lg' ? 'text-sm' : 'text-xs') : 'text-xs';
+const trainsPayload = trains.map((t) => ({
     DCC_ID: t.DCC_ID,
-    Functions: Array.isArray(t.Functions) ? t.Functions : []
+    Functions: t.Functions
 }));
-const isFleetPanel = hasTrains;
-const panelIdSuffix = isFleetPanel ? '' : (panelTrain ? String(panelTrain.DCC_ID).replace(/[^a-zA-Z0-9_-]/g, '_') : 'solo');
+const isFleetPanel = true;
+const panelIdSuffix = isFleetPanel ? '' : String(panelTrain.DCC_ID).replace(/[^a-zA-Z0-9_-]/g, '_');
 const rootDomId = isFleetPanel ? 'train-functions-root' : `train-functions-root-${panelIdSuffix}`;
 const dataDomId = isFleetPanel ? 'train-functions-data' : `train-functions-data-${panelIdSuffix}`;
 %>
@@ -32,7 +27,7 @@ const dataDomId = isFleetPanel ? 'train-functions-data' : `train-functions-data-
     data-portrait="<%= isPortrait ? '1' : '0' %>"
 >
     <% functionNumbers.forEach((fn) => { %>
-    <button type="button" class="inline-flex <%= isPortrait ? 'min-w-14 rounded-lg' : 'shrink-0 rounded-md' %> cursor-pointer items-center justify-center border border-amber-500/50 bg-slate-900 font-semibold tracking-wide text-amber-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors <%= buttonPadding %> <%= buttonTextSize %>" data-function-number="<%= fn %>" data-train-id="<%= panelTrain ? panelTrain.DCC_ID : '' %>">
+    <button type="button" class="inline-flex <%= isPortrait ? 'min-w-14 rounded-lg' : 'shrink-0 rounded-md' %> cursor-pointer items-center justify-center border border-amber-500/50 bg-slate-900 font-semibold tracking-wide text-amber-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors <%= buttonPadding %> <%= buttonTextSize %>" data-function-number="<%= fn %>" data-train-id="<%= panelTrain.DCC_ID %>">
         <%= String(fn).toUpperCase().startsWith('F') ? fn : `F${fn}` %>
     </button>
     <% }) %>
@@ -47,12 +42,7 @@ const dataDomId = isFleetPanel ? 'train-functions-data' : `train-functions-data-
         }
         const isFleetPanel = <%= isFleetPanel ? 'true' : 'false' %>;
 
-        let trainsData = [];
-        try {
-            trainsData = JSON.parse(dataEl.textContent || '[]');
-        } catch {
-            trainsData = [];
-        }
+        const trainsData = JSON.parse(dataEl.textContent);
 
         const portraitShape = 'inline-flex min-w-14 rounded-lg cursor-pointer items-center justify-center border border-amber-500/50 bg-slate-900 font-semibold tracking-wide text-amber-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors';
         const landscapeShape = 'inline-flex shrink-0 rounded-md cursor-pointer items-center justify-center border border-amber-500/50 bg-slate-900 font-semibold tracking-wide text-amber-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors';
@@ -65,8 +55,8 @@ const dataDomId = isFleetPanel ? 'train-functions-data' : `train-functions-data-
         function renderForCab(cab) {
             const t = trainsData.find((x) => String(x.DCC_ID) === String(cab));
             const isPortrait = root.dataset.portrait === '1';
-            const pad = root.dataset.buttonPadding || '';
-            const textSz = root.dataset.buttonTextSize || '';
+            const pad = root.dataset.buttonPadding;
+            const textSz = root.dataset.buttonTextSize;
             const shapeClass = isPortrait ? portraitShape : landscapeShape;
 
             root.className = [
@@ -79,7 +69,7 @@ const dataDomId = isFleetPanel ? 'train-functions-data' : `train-functions-data-
                 return;
             }
 
-            const nums = (t.Functions || []).map((fn) => String(fn).trim()).filter((fn) => fn.length > 0);
+            const nums = t.Functions.map((fn) => String(fn).trim()).filter((fn) => fn.length > 0);
             const frag = document.createDocumentFragment();
             for (const fn of nums) {
                 const btn = document.createElement('button');
@@ -94,7 +84,7 @@ const dataDomId = isFleetPanel ? 'train-functions-data' : `train-functions-data-
         }
 
         function syncToSelection() {
-            const cab = typeof selectedTrain !== 'undefined' && selectedTrain !== null ? selectedTrain : null;
+            const cab = selectedTrain;
             if (cab !== null && trainsData.some((x) => String(x.DCC_ID) === String(cab))) {
                 renderForCab(cab);
             } else if (trainsData[0]) {
@@ -125,10 +115,7 @@ const dataDomId = isFleetPanel ? 'train-functions-data' : `train-functions-data-
 
         if (isFleetPanel) {
             document.addEventListener('selectedTrain:changed', (event) => {
-                const cab = event?.detail?.cab;
-                if (cab === undefined || cab === null) {
-                    return;
-                }
+                const cab = event.detail.cab;
                 if (trainsData.some((x) => String(x.DCC_ID) === String(cab))) {
                     renderForCab(cab);
                 } else if (trainsData[0]) {

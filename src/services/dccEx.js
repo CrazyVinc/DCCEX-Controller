@@ -413,5 +413,5 @@ class DccExClient extends EventEmitter {
 
 export default new DccExClient({
     host: process.env.DCCHost || 'localhost',
-    port: 2560
+    port: process.env.DCCPort || 2560
 });

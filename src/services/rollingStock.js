@@ -51,8 +51,8 @@ class RollingStockService {
             this.trains.push(trainData); // add new
         }
     }
-    removeTrain(DCC_ID) {
-        fs.unlinkSync(`data/rollingstock/trains/${DCC_ID}/info.json`);
+    async removeTrain(DCC_ID) {
+        await fs.unlink(`data/rollingstock/trains/${DCC_ID}/info.json`);
         this.trains = this.trains.filter((train) => train.DCC_ID !== DCC_ID);
     }
 
