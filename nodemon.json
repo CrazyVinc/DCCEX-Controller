@@ -1,8 +1,5 @@
 {
   "watch": ["src"],
-  "ext": "js,mjs,cjs,json,ejs",
-  "exec": "npm run build:css && node src/index.js",
-  "env": {
-    "DEV_LIVE_RELOAD": "1"
-  }
+  "ext": "js,mjs,cjs,json",
+  "exec": "node src/index.js"
 }

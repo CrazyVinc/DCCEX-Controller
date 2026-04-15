@@ -9,7 +9,6 @@ import dccExClient from './services/dccEx.js';
 import rollingStockService from './services/rollingStock.js';
 import { DccEngine } from './core/dccEngine.js';
 import { setupDccWsAdapter } from './adapters/ws/setupDccWsAdapter.js';
-import { createWebRouter } from './adapters/http/createWebRouter.js';
 import { createApiRouter } from './adapters/http/createApiRouter.js';
 
 export function createApp() {
@@ -17,11 +16,11 @@ export function createApp() {
   global.__dirname = dirname;
 
   const app = express();
-  app.locals.devLiveReload = process.env.DEV_LIVE_RELOAD === '1';
-  app.set('view engine', 'ejs');
-  app.set('views', path.join(dirname, 'ui'));
-  app.use(express.static(path.join(dirname, '..', 'public')));
+  const publicDir = path.join(dirname, '..', 'public');
+  const clientDist = path.join(dirname, '..', 'client', 'dist');
+
   app.use(express.json());
+  app.use(express.static(publicDir));
 
   const httpServer = http.createServer(app);
   const socketService = new SocketService(httpServer);
@@ -34,8 +33,15 @@ export function createApp() {
 
   setupDccWsAdapter({ socketService, dccEngine });
 
-  app.use('/', createWebRouter({ rollingStockService }));
   app.use('/api', createApiRouter({ rollingStockService, socketService }));
+  app.use(express.static(clientDist));
+  app.get('*', (req, res, next) => {
+    if (req.method !== 'GET') {
+      next();
+      return;
+    }
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
 
   return {
     app,

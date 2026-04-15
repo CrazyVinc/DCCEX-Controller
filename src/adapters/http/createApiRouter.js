@@ -3,6 +3,10 @@ import express from 'express';
 export function createApiRouter({ rollingStockService, socketService }) {
   const router = express.Router();
 
+  router.get('/rolling-stock', (req, res) => {
+    res.json(rollingStockService.getRollingStock());
+  });
+
   router.get('/health', (req, res) => {
     socketService.emit('routes:health', { at: Date.now() });
     res.json({ ok: true });
