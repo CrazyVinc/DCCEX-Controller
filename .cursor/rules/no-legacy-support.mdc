@@ -10,6 +10,20 @@ alwaysApply: true
 - Prefer replacing old behavior with the single current behavior instead of supporting both.
 - If a change would normally require "legacy support", stop and ask the user for explicit approval first.
 
+## The only allowed "migration" work
+
+- **On-disk JSON / data-file shape changes** are the only case where a deliberate migration path is acceptable.
+- When persisted data must change, implement a **one-time migration** (script or startup migration step) that **rewrites data** to the new shape, then remove the migration once applied (unless the user asks to keep it).
+- Do **not** use "migration" as an excuse to keep dual code paths for refactors (folder moves, Express routes, adapters, UI templates, etc.). Those should be direct cutovers.
+
+### Migration code lifetime (hard cap)
+
+- Migration code may exist for **at most 2 months** after it lands.
+- If a migration is **older than 2 months**, **delete the migration code** (do not keep it “just in case”).
+- Every migration entry point must include a **JSDoc block** with explicit dates using **today’s authoritative date from the chat/user_info context** when the migration is introduced/edited:
+  - `@migrationAdded YYYY-MM-DD` — the date the migration was introduced (or last materially edited)
+  - `@migrationRemoveAfter YYYY-MM-DD` — must be **exactly 2 calendar months** after `@migrationAdded` (same day-of-month when possible; if the target month is shorter, use the last valid day of that month)
+
 ## Examples
 
 - Bad: `if (newPayload) { ... } else { /* old payload support */ ... }`

@@ -2,7 +2,7 @@
   "name": "new-dcc-controller",
   "version": "1.0.0",
   "description": "",
-  "license": "ISC",
+  "license": "apache-2.0",
   "author": "",
   "type": "module",
   "main": "src/index.js",
