@@ -79,6 +79,7 @@ export class DccEngine extends EventEmitter {
       connected: this.dccClient.connected,
       power: this.dccClient.getPower(),
       throttleByCab: this.dccClient.getAllThrottle(),
+      enabledFunctionsByCab: this.dccClient.enabledFunctionsByCab,
       rollingStock: this.getRollingStock(),
     };
   }

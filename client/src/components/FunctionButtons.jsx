@@ -1,4 +1,4 @@
-import { useCallback, useContext, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useSocket } from '../context/SocketContext.jsx';
 import { SelectedTrainContext } from '../context/SelectedTrainContext.jsx';
 
@@ -38,13 +38,38 @@ export function FunctionButtons({ trains, layout = 'portrait', size = 'lg', fixe
     return train.Functions.map((fn) => String(fn).trim()).filter((fn) => fn.length > 0);
   }, [train]);
 
+  useEffect(() => {
+    const onFunction = ({ cab, fn, on }) => {
+      const key = `${cab}:${fn}`;
+      setOnMap((prev) => ({ ...prev, [key]: Boolean(on) }));
+    };
+
+    const onStatus = (status) => {
+      const enabledFunctionsByCab = status.enabledFunctionsByCab || {};
+      setOnMap((prev) => {
+        const next = { ...prev };
+        Object.entries(enabledFunctionsByCab).forEach(([cab, fnStates]) => {
+          Object.entries(fnStates).forEach(([fn, on]) => {
+            next[`${cab}:${fn}`] = Boolean(on);
+          });
+        });
+        return next;
+      });
+    };
+
+    socket.on('dcc:function', onFunction);
+    socket.on('dcc:status', onStatus);
+    socket.emit('dcc:status');
+
+    return () => {
+      socket.off('dcc:function', onFunction);
+      socket.off('dcc:status', onStatus);
+    };
+  }, [socket]);
+
   const toggleFn = useCallback(
     (fnKey, trainId) => {
       socket.emit('dcc:function', { cab: trainId, function: fnKey });
-      setOnMap((prev) => {
-        const k = `${trainId}:${fnKey}`;
-        return { ...prev, [k]: !prev[k] };
-      });
     },
     [socket],
   );
