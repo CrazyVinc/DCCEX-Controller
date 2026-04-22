@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { useSocket } from '../context/SocketContext.jsx';
 
 const ON_ACTIVE =
-  'flex items-center justify-center gap-2 rounded-xl border px-4 py-4 text-sm font-semibold uppercase tracking-wide transition border-emerald-300 bg-emerald-400 text-slate-900 hover:bg-emerald-300';
+  'border-emerald-300 bg-emerald-400 text-slate-900 hover:bg-emerald-300';
 const ON_IDLE =
-  'flex items-center justify-center gap-2 rounded-xl border px-4 py-4 text-sm font-semibold uppercase tracking-wide transition border-emerald-400/80 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/40';
+  'border-emerald-400/80 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/40';
 const OFF_ACTIVE =
-  'flex items-center justify-center gap-2 rounded-xl border px-4 py-4 text-sm font-semibold uppercase tracking-wide transition border-rose-400/80 bg-rose-500 text-slate-900 hover:bg-rose-400';
+  'border-rose-400/80 bg-rose-500 text-slate-900 hover:bg-rose-400';
 const OFF_IDLE =
-  'flex items-center justify-center gap-2 rounded-xl border px-4 py-4 text-sm font-semibold uppercase tracking-wide transition border-rose-500 bg-rose-950/20 text-rose-500 hover:bg-rose-950/40';
+  'border-rose-500 bg-rose-950/20 text-rose-500 hover:bg-rose-950/40';
 
 export function PowerPanel() {
   const socket = useSocket();
@@ -33,7 +33,7 @@ export function PowerPanel() {
       <button
         id="dcc-power-on"
         type="button"
-        className={power ? ON_ACTIVE : ON_IDLE}
+        className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-4 text-sm font-semibold uppercase tracking-wide transition ${power ? ON_ACTIVE : ON_IDLE}`}
         onClick={() => socket.emit('dcc:power:on')}
       >
         <span aria-hidden="true">{'\u26A1'}</span>
@@ -42,7 +42,7 @@ export function PowerPanel() {
       <button
         id="dcc-power-off"
         type="button"
-        className={power ? OFF_IDLE : OFF_ACTIVE}
+        className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-4 text-sm font-semibold uppercase tracking-wide transition ${power ? OFF_IDLE : OFF_ACTIVE}`}
         onClick={() => socket.emit('dcc:power:off')}
       >
         <span aria-hidden="true">○</span>

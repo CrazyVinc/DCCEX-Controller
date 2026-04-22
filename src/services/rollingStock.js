@@ -34,9 +34,18 @@ class RollingStockService {
      * @returns {Promise<void>}
      */
 
-    async addTrain(DCC_ID, Name, Length, Speed = {}, startDelay, Functions, Notes, Meta = {}) {
+    async addTrain(DCC_ID, Name, Length, Speed = {}, startDelay, Functions, Notes, Meta = {}, SpeedLimit = 127) {
         const { Duration, Distance, Step, calculated } = Speed;
-        const trainData = { DCC_ID, Name, Length, Speed: { Duration, Distance, Step, calculated }, startDelay, Functions, Notes, Meta };
+        const trainData = {
+            DCC_ID,
+            Name,
+            Length,
+            Speed: { Duration, Distance, Step, calculated, limit: SpeedLimit },
+            startDelay,
+            Functions,
+            Notes,
+            Meta
+        };
         const dataPath = `data/rollingstock/trains/${DCC_ID}`;
 
         // Write/update info.json on disk
@@ -50,6 +59,25 @@ class RollingStockService {
         } else {
             this.trains.push(trainData); // add new
         }
+    }
+
+    async setTrainSpeedLimit(DCC_ID, SpeedLimit) {
+        const idx = this.trains.findIndex((train) => String(train.DCC_ID) === String(DCC_ID));
+        if (idx === -1) {
+            throw new Error(`Train with DCC_ID ${DCC_ID} not found`);
+        }
+
+        const trainData = {
+            ...this.trains[idx],
+            Speed: {
+                ...this.trains[idx].Speed,
+                limit: SpeedLimit,
+            },
+        };
+        const dataPath = `data/rollingstock/trains/${DCC_ID}`;
+        await writeFile(`${dataPath}/info.json`, JSON.stringify(trainData, null, 2), 'utf-8');
+        this.trains[idx] = trainData;
+        return trainData;
     }
     async removeTrain(DCC_ID) {
         await fs.unlink(`data/rollingstock/trains/${DCC_ID}/info.json`);

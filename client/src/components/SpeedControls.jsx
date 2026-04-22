@@ -2,7 +2,15 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { useSocket } from '../context/SocketContext.jsx';
 import { useSelectedTrain } from '../context/SelectedTrainContext.jsx';
 
-const speedStepLabels = [126, 96, 64, 32, 0];
+function getSpeedStepLabels(maxSpeed) {
+  return [
+    maxSpeed,
+    Math.round(maxSpeed * 0.75),
+    Math.round(maxSpeed * 0.5),
+    Math.round(maxSpeed * 0.25),
+    0,
+  ];
+}
 
 const forwardClass =
   'absolute left-1/2 top-1/2 w-96 max-w-none -translate-x-1/2 -translate-y-1/2 -rotate-90 cursor-pointer appearance-none accent-emerald-500 h-14 [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-[16px] [&::-webkit-slider-thumb]:h-10 [&::-webkit-slider-thumb]:w-14 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-xl [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-slate-700 [&::-webkit-slider-thumb]:bg-emerald-400 [&::-webkit-slider-thumb]:shadow-[0_0_16px_rgba(52,211,153,0.85),0_2px_8px_rgba(0,0,0,0.45)] [&::-moz-range-track]:h-2 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-transparent [&::-moz-range-thumb]:h-10 [&::-moz-range-thumb]:w-14 [&::-moz-range-thumb]:rounded-xl [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-slate-700 [&::-moz-range-thumb]:bg-emerald-400 [&::-moz-range-thumb]:shadow-[0_0_16px_rgba(52,211,153,0.85),0_2px_8px_rgba(0,0,0,0.45)]';
@@ -10,7 +18,9 @@ const forwardClass =
 const reverseClass =
   'absolute left-1/2 top-1/2 w-96 max-w-none -translate-x-1/2 -translate-y-1/2 -rotate-90 cursor-pointer appearance-none accent-rose-500 h-14 [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-[16px] [&::-webkit-slider-thumb]:h-10 [&::-webkit-slider-thumb]:w-14 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-xl [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-slate-700 [&::-webkit-slider-thumb]:bg-rose-400 [&::-webkit-slider-thumb]:shadow-[0_0_16px_rgba(251,113,133,0.85),0_2px_8px_rgba(0,0,0,0.45)] [&::-moz-range-track]:h-2 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-transparent [&::-moz-range-thumb]:h-10 [&::-moz-range-thumb]:w-14 [&::-moz-range-thumb]:rounded-xl [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-slate-700 [&::-moz-range-thumb]:bg-rose-400 [&::-moz-range-thumb]:shadow-[0_0_16px_rgba(251,113,133,0.85),0_2px_8px_rgba(0,0,0,0.45)]';
 
-function SpeedColumn({ ariaLabel, accentBorder, accentShadow, value, onChange, inputClass }) {
+function SpeedColumn({ ariaLabel, accentBorder, accentShadow, value, onChange, inputClass, maxSpeed }) {
+  const speedStepLabels = getSpeedStepLabels(maxSpeed);
+
   return (
     <div className="flex flex-col items-center">
       <div className="flex items-stretch gap-4 rounded-3xl border border-slate-700/90 bg-slate-900/95 px-5 py-6 shadow-[inset_0_1px_0_0_rgba(148,163,184,0.08)] sm:gap-5 sm:px-6">
@@ -21,7 +31,7 @@ function SpeedColumn({ ariaLabel, accentBorder, accentShadow, value, onChange, i
           <input
             type="range"
             min={0}
-            max={126}
+            max={maxSpeed}
             step={1}
             value={value}
             aria-label={ariaLabel}
@@ -44,7 +54,7 @@ function SpeedColumn({ ariaLabel, accentBorder, accentShadow, value, onChange, i
   );
 }
 
-export const SpeedControls = forwardRef(function SpeedControls({ onMeterChange }, ref) {
+export const SpeedControls = forwardRef(function SpeedControls({ onMeterChange, maxSpeed = 126 }, ref) {
   const socket = useSocket();
   const { selectedCab } = useSelectedTrain();
   const throttleByCab = useRef({});
@@ -60,7 +70,7 @@ export const SpeedControls = forwardRef(function SpeedControls({ onMeterChange }
       return;
     }
     const throttle = throttleByCab.current[String(cab)] || { speed: 0, dir: 0 };
-    const speed = Number(throttle.speed) || 0;
+    const speed = Math.min(Number(throttle.speed) || 0, maxSpeed);
     const dir = Number(throttle.dir) === 0 ? 0 : 1;
     setForward(dir === 1 ? speed : 0);
     setReverse(dir === 0 ? speed : 0);
@@ -93,11 +103,11 @@ export const SpeedControls = forwardRef(function SpeedControls({ onMeterChange }
       socket.off('dcc:status', onStatus);
       socket.off('dcc:throttle', onThrottle);
     };
-  }, [socket, selectedCab]);
+  }, [socket, selectedCab, maxSpeed]);
 
   useEffect(() => {
     applyThrottleToControls(selectedCab);
-  }, [selectedCab]);
+  }, [selectedCab, maxSpeed]);
 
   const cab = selectedCab;
 
@@ -134,6 +144,7 @@ export const SpeedControls = forwardRef(function SpeedControls({ onMeterChange }
           value={forward}
           onChange={onForwardInput}
           inputClass={forwardClass}
+          maxSpeed={maxSpeed}
         />
         <span className="mt-4 font-medium tracking-wide text-emerald-400 drop-shadow-[0_0_12px_rgba(52,211,153,0.35)]">
           Forward
@@ -147,6 +158,7 @@ export const SpeedControls = forwardRef(function SpeedControls({ onMeterChange }
           value={reverse}
           onChange={onReverseInput}
           inputClass={reverseClass}
+          maxSpeed={maxSpeed}
         />
         <span className="mt-4 font-medium tracking-wide text-rose-400 drop-shadow-[0_0_12px_rgba(251,113,133,0.35)]">
           Reverse

@@ -13,7 +13,7 @@ import { createApiRouter } from './adapters/http/createApiRouter.js';
 
 export function createApp() {
   const dirname = path.dirname(fileURLToPath(import.meta.url));
-  global.__dirname = dirname;
+  global.__dirname = path.join(dirname, '..');
 
   const app = express();
   const publicDir = path.join(dirname, '..', 'public');

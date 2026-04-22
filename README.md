@@ -1,4 +1,4 @@
-# new-dcc-controller
+# DCCEX-Controller
 
 Web UI and Socket.IO bridge for controlling a **DCC-EX** command station over TCP. The server keeps a **long-running connection** to the layout: it starts when the process starts, not when a browser tab opens.
 

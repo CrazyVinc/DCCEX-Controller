@@ -395,10 +395,14 @@ class DccExClient extends EventEmitter {
      * @param {number} cab
      * @param {number} fn
      */
-    toggleFunction(cab, fn) {
+    toggleFunction(cab, fn, state) {
         const cabNumber = Number(cab);
         const fnToken = String(fn).trim();
         const fnNumber = Number(fnToken.toUpperCase().startsWith('F') ? fnToken.slice(1) : fnToken);
+
+        if (state != null) {
+            return this.send(`F ${cabNumber} ${fnNumber} ${state}`);
+        }
 
         if (!Number.isInteger(cabNumber) || cabNumber < 0 || !Number.isInteger(fnNumber) || fnNumber < 0) {
             return;

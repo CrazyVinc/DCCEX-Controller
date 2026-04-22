@@ -1,4 +1,5 @@
 import EventEmitter from 'events';
+import fs from 'fs';
 
 export class DccEngine extends EventEmitter {
   constructor({ dccClient, rollingStockService }) {
@@ -46,6 +47,27 @@ export class DccEngine extends EventEmitter {
 
     this.dccClient.connect();
     this.started = true;
+
+    try {
+      const settings = JSON.parse(fs.readFileSync(`${global.__dirname}/data/settings.json`, 'utf-8'));
+      console.log('Settings:', settings);
+
+      if (settings.FunctionOnStarts.enabled) {
+        const rollingStock = this.rollingStockService.getRollingStock().trains;
+        const startupCabs = rollingStock.map((train) => train.DCC_ID);
+
+        startupCabs.forEach((cab) => {
+          const train = rollingStock.find((train) => train.DCC_ID === cab);
+
+          settings.FunctionOnStarts.keys.forEach((fn) => {
+            if(train.Functions.includes(fn)) this.dccClient.toggleFunction(cab, fn, 1);
+          });
+        });
+      }
+    } catch (err) {
+      console.error('Error reading settings.json:', err);
+      return;
+    }
   }
 
   getRollingStock() {

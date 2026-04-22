@@ -1,4 +1,38 @@
 @import "tailwindcss";
+@import "sonner/dist/styles.css";
+
+/* Sonner — align with app surfaces (sections, modal): slate + #121a2f */
+[data-sonner-toaster][data-sonner-theme='dark'] {
+  --normal-bg: #121a2f;
+  --normal-bg-hover: #1a2540;
+  --normal-border: rgb(51 65 85 / 0.8);
+  --normal-border-hover: rgb(71 85 105 / 0.9);
+  --normal-text: #e2e8f0;
+
+  --success-bg: #121a2f;
+  --success-border: rgb(52 211 153 / 0.45);
+  --success-text: #a7f3d0;
+
+  --error-bg: #121a2f;
+  --error-border: rgb(244 63 94 / 0.45);
+  --error-text: #fecdd3;
+
+  --info-bg: #121a2f;
+  --info-border: rgb(56 189 248 / 0.4);
+  --info-text: #e2e8f0;
+
+  --warning-bg: #121a2f;
+  --warning-border: rgb(251 191 36 / 0.45);
+  --warning-text: #fde68a;
+}
+
+[data-sonner-toaster][data-sonner-theme='dark'] [data-sonner-toast][data-styled='true'] {
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.12);
+}
+
+[data-sonner-toaster][data-sonner-theme='dark'] [data-description] {
+  color: #94a3b8;
+}
 
 :root {
   --page-bg: #020617;

@@ -4,24 +4,24 @@ export function Layout({ children }) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="top-0 z-40 border-b-2 border-[#854d0e] bg-[var(--surface)]/90">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <nav
+          aria-label="Main navigation"
+          className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8"
+        >
           <div className="flex min-w-0 items-center gap-3">
-            <Link
-              to="/"
-              className="truncate text-sm font-semibold tracking-tight text-[var(--page-fg)] sm:text-base"
-            >
+            <Link to="/" className="truncate text-sm font-semibold tracking-tight text-[var(--page-fg)] sm:text-base">
               DCC controller
             </Link>
           </div>
-          <div className="flex shrink-0 items-center">
-            <Link
-              to="/rollingstock"
-              className="truncate text-sm font-semibold tracking-tight text-[var(--page-fg)] sm:text-base"
-            >
+          <div className="flex shrink-0 items-center gap-4">
+            <Link to="/rollingstock" className="truncate text-sm font-semibold tracking-tight text-[var(--page-fg)] transition-colors hover:text-[var(--accent)] sm:text-base">
               Rolling Stock
             </Link>
+            <Link to="/settings" className="truncate text-sm font-semibold tracking-tight text-[var(--page-fg)] transition-colors hover:text-[var(--accent)] sm:text-base">
+              Settings
+            </Link>
           </div>
-        </div>
+        </nav>
       </header>
       {children}
       <footer className="mt-auto border-t border-[var(--surface-border)] bg-[var(--surface)]">

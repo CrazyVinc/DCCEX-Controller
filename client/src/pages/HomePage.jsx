@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FunctionButtons } from '../components/FunctionButtons.jsx';
 import { PowerPanel } from '../components/PowerPanel.jsx';
+import { Section } from '../components/Section.jsx';
 import { SelectedTrainProvider, useSelectedTrain } from '../context/SelectedTrainContext.jsx';
 import { useSocket } from '../context/SocketContext.jsx';
 import { SpeedControls } from '../components/SpeedControls.jsx';
 import { TrainPicker } from '../components/TrainPicker.jsx';
 
-function ControllerBody({ trains }) {
+function ControllerBody({ trains, globalSpeedLimit }) {
   const { selectedCab, setSelectedCab } = useSelectedTrain();
   const speedRef = useRef(null);
   const [meter, setMeter] = useState('0');
@@ -20,25 +21,17 @@ function ControllerBody({ trains }) {
     return () => socket.off('dcc:message', onMsg);
   }, [socket]);
 
+  const selectedTrain = trains.find((train) => String(train.DCC_ID) === String(selectedCab));
+  const selectedTrainLimit = Number(selectedTrain?.Speed?.limit ?? globalSpeedLimit);
+  const effectiveSpeedLimit = Math.min(globalSpeedLimit, selectedTrainLimit);
+
   return (
     <>
-      <section
-        id="power"
-        className="rounded-2xl border border-slate-700/80 bg-[#121a2f] p-4 shadow-[0_0_24px_rgba(56,189,248,0.1)]"
-      >
-        <a href="#power" className="mb-3 block border-b border-slate-700/80 pb-2">
-          <span className="text-sm font-semibold uppercase tracking-wider text-amber-300">Power</span>
-        </a>
+      <Section id="power" title="Power">
         <PowerPanel />
-      </section>
+      </Section>
 
-      <section
-        id="controller"
-        className="mt-5 rounded-2xl border border-slate-700/80 bg-[#121a2f] p-4 shadow-[0_0_24px_rgba(56,189,248,0.1)]"
-      >
-        <a href="#controller" className="mb-3 block border-b border-slate-700/80 pb-2">
-          <span className="text-sm font-semibold uppercase tracking-wider text-amber-300">Controls</span>
-        </a>
+      <Section id="controller" title="Controls" className="mt-5">
 
         <div className="train-controller-row flex flex-row items-start gap-4">
           <TrainPicker trains={trains} selectedCab={selectedCab} onSelect={setSelectedCab} />
@@ -53,7 +46,7 @@ function ControllerBody({ trains }) {
 
         <div className="flex flex-row items-start gap-3 md:gap-8">
           <div className="min-w-0 flex-1 md:w-1/2 [&>div]:!flex-nowrap [&>div]:overflow-x-auto max-md:[&>div]:!justify-start">
-            <SpeedControls ref={speedRef} onMeterChange={setMeter} />
+            <SpeedControls ref={speedRef} onMeterChange={setMeter} maxSpeed={effectiveSpeedLimit} />
           </div>
           <div className="w-auto shrink-0 md:w-1/2 md:min-w-0 md:shrink">
             <FunctionButtons trains={trains} size="lg" layout="portrait" />
@@ -68,17 +61,11 @@ function ControllerBody({ trains }) {
         >
           stop
         </button>
-      </section>
+      </Section>
 
-      <section
-        id="test"
-        className="mt-5 rounded-2xl border border-slate-700/80 bg-[#121a2f] p-4 shadow-[0_0_24px_rgba(56,189,248,0.1)]"
-      >
-        <a href="#test" className="mb-3 block border-b border-slate-700/80 pb-2">
-          <span className="text-sm font-semibold uppercase tracking-wider text-amber-300">Test</span>
-        </a>
+      <Section id="test" title="Test" className="mt-5">
         <TestPanel socket={socket} output={testOut} setOutput={setTestOut} />
-      </section>
+      </Section>
     </>
   );
 }
@@ -119,17 +106,22 @@ function TestPanel({ socket, output, setOutput }) {
 
 export function HomePage() {
   const [trains, setTrains] = useState(null);
+  const [globalSpeedLimit, setGlobalSpeedLimit] = useState(126);
 
   useEffect(() => {
     fetch('/api/rolling-stock')
       .then((r) => r.json())
       .then((d) => setTrains(d.trains));
+
+    fetch('/api/settings')
+      .then((r) => r.json())
+      .then((d) => setGlobalSpeedLimit(Number(d.data.GlobalSpeedCab ?? 126)));
   }, []);
 
   if (trains === null) {
     return (
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
-        <p className="text-[var(--muted)]">Loading…</p>
+        <p className="text-(--muted)">Loading…</p>
       </main>
     );
   }
@@ -139,7 +131,7 @@ export function HomePage() {
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <section className="rounded-2xl border border-slate-700/80 bg-[#121a2f] p-6 shadow-[0_0_24px_rgba(56,189,248,0.1)]">
           <p className="text-slate-200">No trains configured yet.</p>
-          <p className="mt-2 text-sm text-[var(--muted)]">
+          <p className="mt-2 text-sm text-(--muted)">
             Add locos in{' '}
             <Link className="font-medium text-amber-300 underline hover:text-amber-200" to="/rollingstock">
               Rolling Stock
@@ -154,7 +146,7 @@ export function HomePage() {
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
       <SelectedTrainProvider trains={trains}>
-        <ControllerBody trains={trains} />
+        <ControllerBody trains={trains} globalSpeedLimit={globalSpeedLimit} />
       </SelectedTrainProvider>
     </main>
   );
