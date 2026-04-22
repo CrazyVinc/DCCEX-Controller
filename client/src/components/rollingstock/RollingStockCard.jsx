@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { FunctionButtons } from '../cab/FunctionButtons.jsx';
 
-export function RollingStockCard({ train, globalSpeedLimit = 127, thumbnailUrl = null, onCardClick, onImageClick }) {
+const TRAIN_SPEED_LIMIT_MAX = 127;
+
+export function RollingStockCard({ train, thumbnailUrl = null, onCardClick, onImageClick }) {
   const step = train.Speed && train.Speed.Step != null ? train.Speed.Step : '—';
   const calc = train.Speed && train.Speed.calculated != null ? Number(train.Speed.calculated).toFixed(2) : '—';
-  const [speedValue, setSpeedValue] = useState(Math.min(Number(train.Speed.limit ?? 127), globalSpeedLimit));
+  const [speedValue, setSpeedValue] = useState(Number(train.Speed.limit ?? TRAIN_SPEED_LIMIT_MAX));
   const [showSpeedTooltip, setShowSpeedTooltip] = useState(false);
-  const speedPercent = globalSpeedLimit === 0 ? 0 : (speedValue / globalSpeedLimit) * 100;
+  const speedPercent = (speedValue / TRAIN_SPEED_LIMIT_MAX) * 100;
 
   useEffect(() => {
-    setSpeedValue(Math.min(Number(train.Speed.limit ?? 127), globalSpeedLimit));
-  }, [train.Speed.limit, globalSpeedLimit]);
+    setSpeedValue(Number(train.Speed.limit ?? TRAIN_SPEED_LIMIT_MAX));
+  }, [train.Speed.limit]);
 
   const saveSpeedLimit = async () => {
     await fetch(`/api/trains/${train.DCC_ID}/speed-limit`, {
@@ -88,7 +90,7 @@ export function RollingStockCard({ train, globalSpeedLimit = 127, thumbnailUrl =
             <input
               type="range"
               min={0}
-              max={globalSpeedLimit}
+              max={TRAIN_SPEED_LIMIT_MAX}
               step={1}
               value={speedValue}
               onChange={(event) => setSpeedValue(Number(event.target.value))}

@@ -6,7 +6,9 @@ function parseNum(raw) {
   return Number.isFinite(n) ? n : NaN;
 }
 
-export function EditTrainDialog({ open, train, initialTab = 'details', globalSpeedLimit = 127, onClose, onSaved }) {
+const TRAIN_SPEED_LIMIT_MAX = 127;
+
+export function EditTrainDialog({ open, train, initialTab = 'details', onClose, onSaved }) {
   const dialogRef = useRef(null);
   const [tab, setTab] = useState('details');
   const [formValues, setFormValues] = useState({
@@ -23,7 +25,7 @@ export function EditTrainDialog({ open, train, initialTab = 'details', globalSpe
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [speedCabValue, setSpeedCabValue] = useState(127);
   const [showSpeedCabTooltip, setShowSpeedCabTooltip] = useState(false);
-  const speedCabPercent = globalSpeedLimit === 0 ? 0 : (speedCabValue / globalSpeedLimit) * 100;
+  const speedCabPercent = (speedCabValue / TRAIN_SPEED_LIMIT_MAX) * 100;
 
   useEffect(() => {
     const d = dialogRef.current;
@@ -63,9 +65,9 @@ export function EditTrainDialog({ open, train, initialTab = 'details', globalSpe
       Notes: train.Notes ?? '',
       Meta: JSON.stringify(train.Meta ?? {}, null, 2),
     });
-    setSpeedCabValue(Math.min(Number(train.Speed?.limit ?? 127), globalSpeedLimit));
+    setSpeedCabValue(Number(train.Speed?.limit ?? TRAIN_SPEED_LIMIT_MAX));
     // Intentionally not depending on `train` identity: parent `load()` replaces the object after saves while the dialog stays open.
-  }, [open, train?.DCC_ID, initialTab, globalSpeedLimit]);
+  }, [open, train?.DCC_ID, train?.Speed?.limit, initialTab]);
 
   const saveSpeedCabLimit = async ({ refreshList = false } = {}) => {
     const response = await fetch(`/api/trains/${train.DCC_ID}/speed-limit`, {
@@ -317,7 +319,7 @@ export function EditTrainDialog({ open, train, initialTab = 'details', globalSpe
                   <input
                     type="range"
                     min={0}
-                    max={globalSpeedLimit}
+                    max={TRAIN_SPEED_LIMIT_MAX}
                     step={1}
                     value={speedCabValue}
                     onChange={(event) => setSpeedCabValue(Number(event.target.value))}

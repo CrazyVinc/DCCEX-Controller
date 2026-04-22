@@ -15,6 +15,16 @@ export class DccEngine extends EventEmitter {
       return;
     }
 
+    let settings = null;
+    try {
+      settings = JSON.parse(fs.readFileSync(`${global.__dirname}/data/settings.json`, 'utf-8'));
+    } catch (err) {
+      console.error('Error reading settings.json:', err);
+    }
+
+    const swapForwardAndReverse = !settings || settings.swapForwardAndReverse !== false;
+    this.dccClient.setSwapForwardAndReverse(swapForwardAndReverse);
+
     const rollingStock = this.rollingStockService.getRollingStock();
     const startupCabs = rollingStock.trains.map((train) => train.DCC_ID);
     this.dccClient.setStartupCabs(startupCabs);
@@ -48,25 +58,17 @@ export class DccEngine extends EventEmitter {
     this.dccClient.connect();
     this.started = true;
 
-    try {
-      const settings = JSON.parse(fs.readFileSync(`${global.__dirname}/data/settings.json`, 'utf-8'));
-      console.log('Settings:', settings);
+    if (settings?.FunctionOnStarts?.enabled) {
+      const trains = this.rollingStockService.getRollingStock().trains;
+      const cabs = trains.map((train) => train.DCC_ID);
 
-      if (settings.FunctionOnStarts.enabled) {
-        const rollingStock = this.rollingStockService.getRollingStock().trains;
-        const startupCabs = rollingStock.map((train) => train.DCC_ID);
+      cabs.forEach((cab) => {
+        const train = trains.find((t) => t.DCC_ID === cab);
 
-        startupCabs.forEach((cab) => {
-          const train = rollingStock.find((train) => train.DCC_ID === cab);
-
-          settings.FunctionOnStarts.keys.forEach((fn) => {
-            if(train.Functions.includes(fn)) this.dccClient.toggleFunction(cab, fn, 1);
-          });
+        settings.FunctionOnStarts.keys.forEach((fn) => {
+          if (train.Functions.includes(fn)) this.dccClient.toggleFunction(cab, fn, 1);
         });
-      }
-    } catch (err) {
-      console.error('Error reading settings.json:', err);
-      return;
+      });
     }
   }
 

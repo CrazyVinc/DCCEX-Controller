@@ -1,7 +1,7 @@
 import express from 'express';
 import fs from 'fs';
 import multer from 'multer';
-export function createApiRouter({ rollingStockService, socketService }) {
+export function createApiRouter({ rollingStockService, socketService, dccClient }) {
   const router = express.Router();
   const upload = multer({ storage: multer.memoryStorage() });
 
@@ -60,15 +60,6 @@ export function createApiRouter({ rollingStockService, socketService }) {
     }
 
     try {
-      const settings = await readSettings();
-      const globalSpeedLimit = Number(settings.GlobalSpeedCab ?? 127);
-      if (speedLimit > globalSpeedLimit) {
-        return res.status(400).json({
-          success: false,
-          message: `speedLimit cannot be greater than GlobalSpeedCab (${globalSpeedLimit}).`,
-        });
-      }
-
       const updated = await rollingStockService.setTrainSpeedLimit(dccId, speedLimit);
       return res.status(200).json({
         success: true,
@@ -216,19 +207,22 @@ export function createApiRouter({ rollingStockService, socketService }) {
       });
     }
 
+    if (typeof settings.swapForwardAndReverse !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'swapForwardAndReverse must be a boolean.',
+      });
+    }
+
     // Disable if no function keys are selected
     if (fnOnStart.keys.length === 0) {
       fnOnStart.enabled = false;
     }
 
-    const rollingStock = rollingStockService.getRollingStock();
-    const trainsOverGlobal = rollingStock.trains.filter((train) => Number(train.Speed?.limit ?? 127) > globalSpeedCab);
-    await Promise.all(trainsOverGlobal.map((train) => rollingStockService.setTrainSpeedLimit(train.DCC_ID, globalSpeedCab)));
-
-    
     console.log('Settings updated:', settings);
 
     await fs.promises.writeFile(`${global.__dirname}/data/settings.json`, JSON.stringify(settings), 'utf-8');
+    dccClient.setSwapForwardAndReverse(settings.swapForwardAndReverse);
     return res.status(200).json({ success: true, message: 'Settings updated successfully', data: settings });
   });
 

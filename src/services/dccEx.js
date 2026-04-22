@@ -12,12 +12,14 @@ class DccExClient extends EventEmitter {
      * @param {number} [options.port]
      * @param {boolean} [options.autoReconnect=true]
      */
-    constructor({ host, port, autoReconnect = true, startupCabs = [] }) {
+    constructor({ host, port, autoReconnect = true, startupCabs = [], swapForwardAndReverse = true }) {
         super();
 
         this.host = host;
         this.port = port;
         this.autoReconnect = autoReconnect;
+        /** When true, flip DCC-EX direction bit on send and on loco status parse (0↔1). */
+        this.swapForwardAndReverse = Boolean(swapForwardAndReverse);
 
         this.socket = null;
         this.connected = false;
@@ -171,6 +173,23 @@ class DccExClient extends EventEmitter {
     }
 
     /**
+     * @param {boolean} swap - when true, exchange forward/reverse vs DCC-EX wire format
+     */
+    setSwapForwardAndReverse(swap) {
+        this.swapForwardAndReverse = Boolean(swap);
+    }
+
+    _directionToWire(appDir) {
+        const d = Number(appDir) === 0 ? 0 : 1;
+        return this.swapForwardAndReverse ? d ^ 1 : d;
+    }
+
+    _directionFromWire(wireDir) {
+        const d = Number(wireDir) === 0 ? 0 : 1;
+        return this.swapForwardAndReverse ? d ^ 1 : d;
+    }
+
+    /**
      * @param {Array<number|string>} cabs
      * @returns {number[]}
      */
@@ -274,7 +293,7 @@ class DccExClient extends EventEmitter {
         }
 
         const speed = Number.isFinite(rawSpeed) ? Math.max(0, Math.min(126, Math.abs(rawSpeed))) : 0;
-        const direction = rawDirection ^ 1;
+        const direction = this._directionFromWire(rawDirection);
         this._setThrottleState(cab, speed, direction);
 
         // Rebuild all known states from the incoming bitmask snapshot.
@@ -346,9 +365,10 @@ class DccExClient extends EventEmitter {
         }
 
         const clampedSpeed = Math.max(0, Math.min(126, Math.round(speedStep)));
-        this._setThrottleState(cabNumber, clampedSpeed, Number(direction) === 0 ? 0 : 1);
+        const appDir = Number(direction) === 0 ? 0 : 1;
+        this._setThrottleState(cabNumber, clampedSpeed, appDir);
         // DCC-EX: lowercase `t` = throttle; uppercase `T` = turnout (same as turnoutThrow/Close).
-        this.send(`t ${cabNumber} ${speed} ${direction ^ 1}`);
+        this.send(`t ${cabNumber} ${speed} ${this._directionToWire(appDir)}`);
     }
 
     /**

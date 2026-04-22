@@ -130,6 +130,7 @@ export function Settings() {
   const [startupFunctionEnabled, setStartupFunctionEnabled] = useState(false);
   const [functionKeys, setFunctionKeys] = useState('');
   const [globalSpeedCab, setGlobalSpeedCab] = useState(127);
+  const [swapForwardAndReverse, setSwapForwardAndReverse] = useState(true);
   const [showGlobalSpeedTooltip, setShowGlobalSpeedTooltip] = useState(false);
   const globalSpeedPercent = (globalSpeedCab / 127) * 100;
 
@@ -144,6 +145,7 @@ export function Settings() {
       setFunctionKeys(result.data.FunctionOnStarts.keys.join(', '));
       setStartupFunctionEnabled(result.data.FunctionOnStarts.enabled);
       setGlobalSpeedCab(Number(result.data.GlobalSpeedCab ?? 127));
+      setSwapForwardAndReverse(result.data.swapForwardAndReverse !== false);
     }
 
     loadSettings();
@@ -157,6 +159,7 @@ export function Settings() {
         enabled: startupFunctionEnabled,
       },
       GlobalSpeedCab: Number(globalSpeedCab),
+      swapForwardAndReverse,
     };
     const response = await fetch('/api/settings', {
       method: 'POST',
@@ -254,6 +257,24 @@ export function Settings() {
                 </div>
                 <small className="block text-xs leading-snug text-slate-500">
                   Global cab speed step (0-127).
+                </small>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                  <input
+                    id="swap-forward-reverse"
+                    name="swapForwardAndReverse"
+                    type="checkbox"
+                    checked={swapForwardAndReverse}
+                    onChange={(event) => setSwapForwardAndReverse(event.target.checked)}
+                    className="h-4 w-4 shrink-0 rounded border-slate-600 bg-slate-900 text-amber-300 focus:ring-amber-300"
+                  />
+                  <label htmlFor="swap-forward-reverse" className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    Swap forward / reverse vs DCC-EX
+                  </label>
+                </div>
+                <small className="block text-xs leading-snug text-slate-500">
+                  When enabled, the direction sent to the command station is inverted to match DCC-EX. Turn off if forward and reverse match the layout without swapping.
                 </small>
               </div>
             </div>

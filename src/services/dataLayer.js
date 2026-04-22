@@ -4,7 +4,8 @@ import fs from 'fs';
 if (!fs.existsSync('data/settings.json')) {
   fs.writeFileSync(
     'data/settings.json',
-    JSON.stringify({ FunctionOnStarts: { keys: [], enabled: false }, GlobalSpeedCab: 127 }, null, 2)
+    JSON.stringify(
+      { FunctionOnStarts: { keys: [], enabled: false }, GlobalSpeedCab: 127, swapForwardAndReverse: false }, null, 2)
   );
 }
 

@@ -35,7 +35,7 @@ export function createApp() {
 
   setupDccWsAdapter({ socketService, dccEngine });
 
-  app.use('/api', createApiRouter({ rollingStockService, socketService }));
+  app.use('/api', createApiRouter({ rollingStockService, socketService, dccClient: dccExClient }));
   app.use(express.static(clientDist));
   app.get('*', (req, res, next) => {
     if (req.method !== 'GET') {

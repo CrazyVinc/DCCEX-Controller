@@ -6,7 +6,6 @@ import { Section } from '../components/common/Section.jsx';
 
 export function RollingStockPage() {
   const [rollingStock, setRollingStock] = useState(null);
-  const [globalSpeedLimit, setGlobalSpeedLimit] = useState(127);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedTrain, setSelectedTrain] = useState(null);
@@ -14,12 +13,8 @@ export function RollingStockPage() {
   const [thumbnailsByTrain, setThumbnailsByTrain] = useState({});
 
   const load = useCallback(async () => {
-    const [stock, settings] = await Promise.all([
-      fetch('/api/rolling-stock').then((r) => r.json()),
-      fetch('/api/settings').then((r) => r.json()),
-    ]);
+    const stock = await fetch('/api/rolling-stock').then((r) => r.json());
     setRollingStock(stock);
-    setGlobalSpeedLimit(Number(settings.data.GlobalSpeedCab ?? 127));
     setSelectedTrain((prev) => {
       if (!prev) {
         return null;
@@ -73,7 +68,6 @@ export function RollingStockPage() {
             <RollingStockCard
               key={String(train.DCC_ID)}
               train={train}
-              globalSpeedLimit={globalSpeedLimit}
               thumbnailUrl={thumbnailsByTrain[String(train.DCC_ID)]}
               onCardClick={(clickedTrain) => {
                 setSelectedTrain(clickedTrain);
@@ -95,7 +89,6 @@ export function RollingStockPage() {
         open={editDialogOpen}
         train={selectedTrain}
         initialTab={editInitialTab}
-        globalSpeedLimit={globalSpeedLimit}
         onClose={() => {
           setEditDialogOpen(false);
           setSelectedTrain(null);
