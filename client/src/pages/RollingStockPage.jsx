@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AddTrainDialog } from '../components/AddTrainDialog.jsx';
-import { EditTrainDialog } from '../components/EditTrainDialog.jsx';
-import { RollingStockCard } from '../components/RollingStockCard.jsx';
-import { Section } from '../components/Section.jsx';
+import { AddTrainDialog } from '../components/rollingstock/AddTrainDialog.jsx';
+import { EditTrainDialog } from '../components/rollingstock/EditTrainDialog.jsx';
+import { RollingStockCard } from '../components/rollingstock/RollingStockCard.jsx';
+import { Section } from '../components/common/Section.jsx';
 
 export function RollingStockPage() {
   const [rollingStock, setRollingStock] = useState(null);

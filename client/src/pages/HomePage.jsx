@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FunctionButtons } from '../components/FunctionButtons.jsx';
-import { PowerPanel } from '../components/PowerPanel.jsx';
-import { Section } from '../components/Section.jsx';
+import { FunctionButtons } from '../components/cab/FunctionButtons.jsx';
+import { PowerPanel } from '../components/cab/PowerPanel.jsx';
+import { Section } from '../components/common/Section.jsx';
 import { SelectedTrainProvider, useSelectedTrain } from '../context/SelectedTrainContext.jsx';
 import { useSocket } from '../context/SocketContext.jsx';
-import { SpeedControls } from '../components/SpeedControls.jsx';
-import { TrainPicker } from '../components/TrainPicker.jsx';
+import { SpeedControls } from '../components/cab/SpeedControls.jsx';
+import { TrainPicker } from '../components/cab/TrainPicker.jsx';
 
 function ControllerBody({ trains, globalSpeedLimit }) {
   const { selectedCab, setSelectedCab } = useSelectedTrain();

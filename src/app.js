@@ -4,7 +4,7 @@ import http from 'http';
 import express from 'express';
 
 import './services/dataLayer.js';
-import { SocketService } from './socketio.js';
+import { SocketService } from './adapters/ws/socketio.js';
 import dccExClient from './services/dccEx.js';
 import rollingStockService from './services/rollingStock.js';
 import { DccEngine } from './core/dccEngine.js';

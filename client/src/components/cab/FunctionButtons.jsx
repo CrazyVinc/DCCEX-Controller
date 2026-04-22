@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useSocket } from '../context/SocketContext.jsx';
-import { SelectedTrainContext } from '../context/SelectedTrainContext.jsx';
+import { useSocket } from '../../context/SocketContext.jsx';
+import { SelectedTrainContext } from '../../context/SelectedTrainContext.jsx';
 
 function labelForFn(fn) {
   const s = String(fn);

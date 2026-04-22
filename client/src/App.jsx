@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { Layout } from './components/Layout.jsx';
+import { Layout } from './components/layout/Layout.jsx';
 import { HomePage } from './pages/HomePage.jsx';
 import { RollingStockPage } from './pages/RollingStockPage.jsx';
 import { Settings } from './pages/settings.jsx';

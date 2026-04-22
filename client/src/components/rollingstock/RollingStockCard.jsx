@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FunctionButtons } from './FunctionButtons.jsx';
+import { FunctionButtons } from '../cab/FunctionButtons.jsx';
 
 export function RollingStockCard({ train, globalSpeedLimit = 127, thumbnailUrl = null, onCardClick, onImageClick }) {
   const step = train.Speed && train.Speed.Step != null ? train.Speed.Step : '—';

@@ -1,13 +1,13 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { FunctionButtons } from '../components/FunctionButtons.jsx';
-import { PowerPanel } from '../components/PowerPanel.jsx';
+import { FunctionButtons } from '../components/cab/FunctionButtons.jsx';
+import { PowerPanel } from '../components/cab/PowerPanel.jsx';
 import { SelectedTrainProvider, useSelectedTrain } from '../context/SelectedTrainContext.jsx';
 import { useSocket } from '../context/SocketContext.jsx';
-import { SpeedControls } from '../components/SpeedControls.jsx';
-import { TrainPicker } from '../components/TrainPicker.jsx';
-import { Section } from '../components/Section.jsx';
+import { SpeedControls } from '../components/cab/SpeedControls.jsx';
+import { TrainPicker } from '../components/cab/TrainPicker.jsx';
+import { Section } from '../components/common/Section.jsx';
 import { toast } from 'sonner';
 
 const HOVER_OPEN_MS = 1500;

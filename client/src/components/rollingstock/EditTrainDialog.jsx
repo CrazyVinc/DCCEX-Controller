@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Hr } from './Hr.jsx';
+import { Hr } from '../common/Hr.jsx';
 
 function parseNum(raw) {
   const n = parseFloat(String(raw).trim().replace(',', '.'));

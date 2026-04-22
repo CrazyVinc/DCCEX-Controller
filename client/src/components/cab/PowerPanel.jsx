@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSocket } from '../context/SocketContext.jsx';
+import { useSocket } from '../../context/SocketContext.jsx';
 
 const ON_ACTIVE =
   'border-emerald-300 bg-emerald-400 text-slate-900 hover:bg-emerald-300';

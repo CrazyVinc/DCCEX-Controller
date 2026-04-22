@@ -1,0 +1,68 @@
+---
+description: Conventional Commits 1.0.0 for git commit / merge message buffers
+alwaysApply: false
+globs:
+  - "**/.git/COMMIT_EDITMSG"
+  - "**/.git/MERGE_MSG"
+---
+
+# Conventional Commits
+
+Follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) for **git commit messages** (and squash-merge titles when the user asks for a commit-style message).
+
+## When this rule applies
+
+Cursor rules do **not** have a dedicated “only when generating git messages” switch. You choose one of these patterns (see [Rules | Cursor Docs](https://cursor.com/docs/context/rules)):
+
+1. **File-scoped (this file):** `globs` match Git’s message buffers. The rule is intended to attach when those paths are **in context** (for example you `@` reference `.git/COMMIT_EDITMSG` or add it to the prompt after `git commit` opens it). Exact behavior can vary by Cursor version.
+2. **Manual:** In Chat, `@`-mention this rule whenever you want a Conventional Commit message without involving `COMMIT_EDITMSG`.
+3. **Apply intelligently:** If you remove `globs` and keep a clear `description`, Cursor may include the rule when the agent judges the task relevant (not guaranteed).
+
+## Format
+
+```
+<type>[optional scope][optional !]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+- **Description**: imperative mood, lowercase after the colon is fine; no trailing period required; keep the subject line concise (about 50–72 characters when practical).
+- **Body**: optional; blank line after the subject; explain *what* and *why*, not implementation trivia the diff already shows.
+- **Breaking changes**: either `type(scope)!:` / `feat!:` in the subject, or a footer `BREAKING CHANGE: <description>` (see the spec).
+
+## Types
+
+Use the smallest accurate type. Common choices:
+
+| Type | Use for |
+|------|--------|
+| `feat` | New user-visible capability |
+| `fix` | Bug fix |
+| `refactor` | Internal change without behavior change |
+| `perf` | Performance improvement |
+| `docs` | Documentation only |
+| `test` | Tests only |
+| `build` / `ci` | Tooling, CI, build config |
+| `chore` | Maintenance that does not fit above |
+
+Other types from team tooling (e.g. commitlint) are fine if they match the spec’s pattern.
+
+## Scope
+
+Optional noun in parentheses, e.g. `fix(client):`, `refactor(api):`, describing the area touched.
+
+## Examples (this project)
+
+```
+refactor(client): group components under cab/common/layout/rollingstock
+
+Move Socket.IO adapter to src/adapters/ws/socketio.js.
+```
+
+```
+fix: prevent duplicate throttle on speed updates
+```
+
+When the user only asks for a **single-line** message, output the subject line only (no body) unless they ask for a body or footers.

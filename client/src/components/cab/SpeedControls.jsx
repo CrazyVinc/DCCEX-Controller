@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { useSocket } from '../context/SocketContext.jsx';
-import { useSelectedTrain } from '../context/SelectedTrainContext.jsx';
+import { useSocket } from '../../context/SocketContext.jsx';
+import { useSelectedTrain } from '../../context/SelectedTrainContext.jsx';
 
 function getSpeedStepLabels(maxSpeed) {
   return [
