@@ -1,5 +1,6 @@
 import fs from 'fs';
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, readdir, rename, rm, unlink, writeFile } from 'fs/promises';
+import path from 'path';
 
 class RollingStockService {
     //readdirsync returns an array of file names in the directory, we can use that to read each info.json and parse it into an object
@@ -79,31 +80,131 @@ class RollingStockService {
         this.trains[idx] = trainData;
         return trainData;
     }
+    async updateTrain(DCC_ID, updates) {
+        const idx = this.trains.findIndex((train) => String(train.DCC_ID) === String(DCC_ID));
+        if (idx === -1) {
+            throw new Error(`Train with DCC_ID ${DCC_ID} not found`);
+        }
+
+        const currentTrain = this.trains[idx];
+        const nextTrain = {
+            ...currentTrain,
+            ...updates,
+            DCC_ID: currentTrain.DCC_ID,
+            Speed: {
+                ...currentTrain.Speed,
+                ...updates.Speed,
+                limit: currentTrain.Speed?.limit ?? 127,
+            },
+        };
+
+        const dataPath = `data/rollingstock/trains/${DCC_ID}`;
+        await writeFile(`${dataPath}/info.json`, JSON.stringify(nextTrain, null, 2), 'utf-8');
+        this.trains[idx] = nextTrain;
+        return nextTrain;
+    }
+
     async removeTrain(DCC_ID) {
+        const idx = this.trains.findIndex((train) => String(train.DCC_ID) === String(DCC_ID));
+        if (idx === -1) {
+            throw new Error(`Train with DCC_ID ${DCC_ID} not found`);
+        }
         await fs.unlink(`data/rollingstock/trains/${DCC_ID}/info.json`);
-        this.trains = this.trains.filter((train) => train.DCC_ID !== DCC_ID);
+        this.trains = this.trains.filter((train) => String(train.DCC_ID) !== String(DCC_ID));
     }
 
-
-    /**
-     * Add an image to a train or wagon.
-     * @param {'train'|'wagon'} Type - The type of rolling stock ("train" or "wagon").
-     * @param {number} DCC_ID - The DCC_ID of the item to add the image to.
-     * @param {string} image - The image (URL, path, or data).
-     */
-    addImage(Type, DCC_ID, Media) {
-        /** 
-         * add to info.json a new section called images:
-         * file: image0001.png
-         * order:
-         * 
-         * for order, 0 is always thumbnail.
-         */
-        let path = `path`;
-        // fs.writeFile()
+    getTrainImagesDir(DCC_ID) {
+        return `data/rollingstock/trains/${DCC_ID}`;
     }
 
-    removeImage(Type, DCC_ID, Media) {}
+    parseImageOrder(fileName) {
+        const match = /^image(\d{3})\.[a-z0-9]+$/i.exec(fileName);
+        if (!match) {
+            return Number.MAX_SAFE_INTEGER;
+        }
+        return Number(match[1]);
+    }
+
+    async listTrainImages(DCC_ID) {
+        const imagesDir = this.getTrainImagesDir(DCC_ID);
+        await mkdir(imagesDir, { recursive: true });
+        const files = await readdir(imagesDir);
+        const imageFiles = files
+            .filter((name) => /^image\d{3}\.[a-z0-9]+$/i.test(name))
+            .sort((a, b) => this.parseImageOrder(a) - this.parseImageOrder(b));
+
+        return imageFiles.map((name, index) => ({
+            name,
+            order: index + 1,
+            url: `/rollingstock-images/trains/${DCC_ID}/${name}`,
+        }));
+    }
+
+    async addTrainImage(DCC_ID, file) {
+        if (!file) {
+            throw new Error('Image file is required');
+        }
+        const existingTrain = this.trains.find((train) => String(train.DCC_ID) === String(DCC_ID));
+        if (!existingTrain) {
+            throw new Error(`Train with DCC_ID ${DCC_ID} not found`);
+        }
+
+        const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+        const safeExt = ext.replace(/[^.a-z0-9]/g, '');
+        const imagesDir = this.getTrainImagesDir(DCC_ID);
+        await mkdir(imagesDir, { recursive: true });
+        const currentImages = await this.listTrainImages(DCC_ID);
+        const nextOrder = currentImages.length + 1;
+        const nextName = `image${String(nextOrder).padStart(3, '0')}${safeExt}`;
+        const targetPath = path.join(imagesDir, nextName);
+
+        await writeFile(targetPath, file.buffer);
+        return this.listTrainImages(DCC_ID);
+    }
+
+    async reorderTrainImages(DCC_ID, orderedNames) {
+        const existingTrain = this.trains.find((train) => String(train.DCC_ID) === String(DCC_ID));
+        if (!existingTrain) {
+            throw new Error(`Train with DCC_ID ${DCC_ID} not found`);
+        }
+
+        const imagesDir = this.getTrainImagesDir(DCC_ID);
+        const existingImages = await this.listTrainImages(DCC_ID);
+        const existingNames = existingImages.map((image) => image.name);
+        if (existingNames.length !== orderedNames.length) {
+            throw new Error('Image reorder payload must include all images');
+        }
+        if (!existingNames.every((name) => orderedNames.includes(name))) {
+            throw new Error('Image reorder payload contains invalid file names');
+        }
+
+        const tmpPrefix = `tmp_${Date.now()}`;
+        const tmpFiles = [];
+        for (let i = 0; i < orderedNames.length; i += 1) {
+            const oldName = orderedNames[i];
+            const ext = path.extname(oldName).toLowerCase();
+            const tmpName = `${tmpPrefix}_${i + 1}${ext}`;
+            await rename(path.join(imagesDir, oldName), path.join(imagesDir, tmpName));
+            tmpFiles.push({ tmpName, ext });
+        }
+
+        for (let i = 0; i < tmpFiles.length; i += 1) {
+            const finalName = `image${String(i + 1).padStart(3, '0')}${tmpFiles[i].ext}`;
+            await rename(path.join(imagesDir, tmpFiles[i].tmpName), path.join(imagesDir, finalName));
+        }
+
+        return this.listTrainImages(DCC_ID);
+    }
+
+    async removeTrainImage(DCC_ID, imageName) {
+        const imagesDir = this.getTrainImagesDir(DCC_ID);
+        const imagePath = path.join(imagesDir, imageName);
+        await unlink(imagePath);
+        const currentImages = await this.listTrainImages(DCC_ID);
+        const namesInOrder = currentImages.map((image) => image.name);
+        await this.reorderTrainImages(DCC_ID, namesInOrder);
+        return this.listTrainImages(DCC_ID);
+    }
     
     addWagon(wagon) {
         this.wagons.push(wagon);

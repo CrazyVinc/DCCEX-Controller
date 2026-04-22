@@ -1,7 +1,9 @@
 import express from 'express';
 import fs from 'fs';
+import multer from 'multer';
 export function createApiRouter({ rollingStockService, socketService }) {
   const router = express.Router();
+  const upload = multer({ storage: multer.memoryStorage() });
 
   const readSettings = async () => {
     const settingsJson = await fs.promises.readFile(`${global.__dirname}/data/settings.json`, 'utf-8');
@@ -78,6 +80,92 @@ export function createApiRouter({ rollingStockService, socketService }) {
         success: false,
         message: error.message,
       });
+    }
+  });
+
+  router.put('/trains/:dccId', async (req, res) => {
+    const { dccId } = req.params;
+    const { Name, Length, Speed, startDelay, Functions, Notes, Meta } = req.body;
+    try {
+      const updated = await rollingStockService.updateTrain(dccId, {
+        Name,
+        Length,
+        Speed,
+        startDelay,
+        Functions,
+        Notes,
+        Meta,
+      });
+      return res.status(200).json({
+        success: true,
+        message: 'Train updated successfully',
+        data: updated,
+      });
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  });
+
+  router.delete('/trains/:dccId', async (req, res) => {
+    const { dccId } = req.params;
+    try {
+      await rollingStockService.removeTrain(dccId);
+      return res.status(200).json({
+        success: true,
+        message: 'Train removed successfully',
+      });
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  });
+
+  router.get('/trains/:dccId/images', async (req, res) => {
+    const { dccId } = req.params;
+    try {
+      const images = await rollingStockService.listTrainImages(dccId);
+      return res.status(200).json({ success: true, data: images });
+    } catch (error) {
+      return res.status(404).json({ success: false, message: error.message });
+    }
+  });
+
+  router.post('/trains/:dccId/images', upload.single('image'), async (req, res) => {
+    const { dccId } = req.params;
+    try {
+      const images = await rollingStockService.addTrainImage(dccId, req.file);
+      return res.status(201).json({ success: true, data: images });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  router.post('/trains/:dccId/images/reorder', async (req, res) => {
+    const { dccId } = req.params;
+    const { order } = req.body;
+    if (!Array.isArray(order)) {
+      return res.status(400).json({ success: false, message: 'order must be an array of image file names' });
+    }
+    try {
+      const images = await rollingStockService.reorderTrainImages(dccId, order);
+      return res.status(200).json({ success: true, data: images });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  router.delete('/trains/:dccId/images/:imageName', async (req, res) => {
+    const { dccId, imageName } = req.params;
+    try {
+      const images = await rollingStockService.removeTrainImage(dccId, imageName);
+      return res.status(200).json({ success: true, data: images });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
     }
   });
 

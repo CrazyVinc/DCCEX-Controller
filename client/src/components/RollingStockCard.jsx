@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FunctionButtons } from './FunctionButtons.jsx';
 
-export function RollingStockCard({ train, globalSpeedLimit = 127 }) {
+export function RollingStockCard({ train, globalSpeedLimit = 127, thumbnailUrl = null, onCardClick, onImageClick }) {
   const step = train.Speed && train.Speed.Step != null ? train.Speed.Step : '—';
   const calc = train.Speed && train.Speed.calculated != null ? Number(train.Speed.calculated).toFixed(2) : '—';
   const [speedValue, setSpeedValue] = useState(Math.min(Number(train.Speed.limit ?? 127), globalSpeedLimit));
@@ -20,10 +20,24 @@ export function RollingStockCard({ train, globalSpeedLimit = 127 }) {
     });
   };
 
+  const handleCardClick = (event) => {
+    if (!onCardClick) {
+      return;
+    }
+    const interactiveTarget = event.target.closest('button, input, textarea, select, a, label');
+    if (interactiveTarget) {
+      return;
+    }
+    onCardClick(train);
+  };
+
   return (
-    <div className="flex h-full flex-col rounded-xl border border-slate-700/80 bg-slate-900/40 p-5 transition-colors hover:border-amber-300/35">
-      <div className="flex flex-1 justify-between">
-        <div className="space-y-2">
+    <div
+      className="flex h-full cursor-pointer flex-col rounded-xl border border-slate-700/80 bg-slate-900/40 p-5 transition-colors hover:border-amber-300/35"
+      onClick={handleCardClick}
+    >
+      <div className="flex flex-1 justify-between gap-4">
+        <div className="min-w-0 flex-1 space-y-2">
           <h2 className="text-xl font-bold tracking-wide text-amber-300">{train.Name}</h2>
           <div className="space-y-1 text-sm">
             <p>
@@ -39,14 +53,24 @@ export function RollingStockCard({ train, globalSpeedLimit = 127 }) {
               <span className="font-semibold text-slate-200">{calc} mm/s</span>
             </p>
           </div>
+        </div>
+        <div
+          className="flex h-32 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-slate-700/80 bg-slate-900/70"
+          onClick={(event) => {
+            event.stopPropagation();
+            onImageClick?.(train);
+          }}
+        >
+          {thumbnailUrl ? (
+            <img src={thumbnailUrl} alt={`${train.Name} preview`} className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-[10px] italic text-slate-500">No photo</span>
+          )}
+        </div>
+      </div>
 
-          <div className="mt-4 flex min-h-10 flex-wrap content-start gap-2">
-            <FunctionButtons trains={[train]} fixedCab={train.DCC_ID} size="md" layout="horizontal" />
-          </div>
-        </div>
-        <div className="ml-4 flex h-32 w-24 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-slate-700/80">
-          <span className="text-[10px] italic text-slate-500">No photo</span>
-        </div>
+      <div className="mt-4">
+        <FunctionButtons trains={[train]} fixedCab={train.DCC_ID} size="md" layout="horizontal" />
       </div>
 
       <div className="mt-auto pt-4">

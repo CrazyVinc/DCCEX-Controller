@@ -18,9 +18,11 @@ export function createApp() {
   const app = express();
   const publicDir = path.join(dirname, '..', 'public');
   const clientDist = path.join(dirname, '..', 'client', 'dist');
+  const rollingStockImagesDir = path.join(dirname, '..', 'data', 'rollingstock');
 
   app.use(express.json());
   app.use(express.static(publicDir));
+  app.use('/rollingstock-images', express.static(rollingStockImagesDir));
 
   const httpServer = http.createServer(app);
   const socketService = new SocketService(httpServer);

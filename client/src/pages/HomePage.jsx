@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { FunctionButtons } from '../components/FunctionButtons.jsx';
 import { PowerPanel } from '../components/PowerPanel.jsx';
 import { Section } from '../components/Section.jsx';
@@ -105,18 +105,29 @@ function TestPanel({ socket, output, setOutput }) {
 }
 
 export function HomePage() {
+  const location = useLocation();
   const [trains, setTrains] = useState(null);
   const [globalSpeedLimit, setGlobalSpeedLimit] = useState(126);
 
   useEffect(() => {
-    fetch('/api/rolling-stock')
-      .then((r) => r.json())
-      .then((d) => setTrains(d.trains));
-
-    fetch('/api/settings')
-      .then((r) => r.json())
-      .then((d) => setGlobalSpeedLimit(Number(d.data.GlobalSpeedCab ?? 126)));
-  }, []);
+    let cancelled = false;
+    (async () => {
+      const [stockRes, settingsRes] = await Promise.all([
+        fetch('/api/rolling-stock'),
+        fetch('/api/settings'),
+      ]);
+      if (cancelled) {
+        return;
+      }
+      const stock = await stockRes.json();
+      const settings = await settingsRes.json();
+      setTrains(stock.trains);
+      setGlobalSpeedLimit(Number(settings.data.GlobalSpeedCab ?? 126));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [location.key]);
 
   if (trains === null) {
     return (

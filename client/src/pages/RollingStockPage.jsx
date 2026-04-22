@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AddTrainDialog } from '../components/AddTrainDialog.jsx';
+import { EditTrainDialog } from '../components/EditTrainDialog.jsx';
 import { RollingStockCard } from '../components/RollingStockCard.jsx';
 import { Section } from '../components/Section.jsx';
 
@@ -7,15 +8,37 @@ export function RollingStockPage() {
   const [rollingStock, setRollingStock] = useState(null);
   const [globalSpeedLimit, setGlobalSpeedLimit] = useState(127);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedTrain, setSelectedTrain] = useState(null);
+  const [editInitialTab, setEditInitialTab] = useState('details');
+  const [thumbnailsByTrain, setThumbnailsByTrain] = useState({});
 
-  const load = useCallback(() => {
-    Promise.all([
+  const load = useCallback(async () => {
+    const [stock, settings] = await Promise.all([
       fetch('/api/rolling-stock').then((r) => r.json()),
       fetch('/api/settings').then((r) => r.json()),
-    ]).then(([stock, settings]) => {
-      setRollingStock(stock);
-      setGlobalSpeedLimit(Number(settings.data.GlobalSpeedCab ?? 127));
+    ]);
+    setRollingStock(stock);
+    setGlobalSpeedLimit(Number(settings.data.GlobalSpeedCab ?? 127));
+    setSelectedTrain((prev) => {
+      if (!prev) {
+        return null;
+      }
+      const next = stock.trains.find((t) => String(t.DCC_ID) === String(prev.DCC_ID));
+      return next ?? prev;
     });
+
+    const imageEntries = await Promise.all(
+      stock.trains.map(async (train) => {
+        const response = await fetch(`/api/trains/${train.DCC_ID}/images`);
+        if (!response.ok) {
+          return [String(train.DCC_ID), null];
+        }
+        const imageData = await response.json();
+        return [String(train.DCC_ID), imageData.data[0]?.url ?? null];
+      }),
+    );
+    setThumbnailsByTrain(Object.fromEntries(imageEntries));
   }, []);
 
   useEffect(() => {
@@ -47,12 +70,38 @@ export function RollingStockPage() {
       >
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {rollingStock.trains.map((train) => (
-            <RollingStockCard key={String(train.DCC_ID)} train={train} globalSpeedLimit={globalSpeedLimit} />
+            <RollingStockCard
+              key={String(train.DCC_ID)}
+              train={train}
+              globalSpeedLimit={globalSpeedLimit}
+              thumbnailUrl={thumbnailsByTrain[String(train.DCC_ID)]}
+              onCardClick={(clickedTrain) => {
+                setSelectedTrain(clickedTrain);
+                setEditInitialTab('details');
+                setEditDialogOpen(true);
+              }}
+              onImageClick={(clickedTrain) => {
+                setSelectedTrain(clickedTrain);
+                setEditInitialTab('images');
+                setEditDialogOpen(true);
+              }}
+            />
           ))}
         </div>
       </Section>
 
       <AddTrainDialog open={dialogOpen} onClose={() => setDialogOpen(false)} onSaved={load} />
+      <EditTrainDialog
+        open={editDialogOpen}
+        train={selectedTrain}
+        initialTab={editInitialTab}
+        globalSpeedLimit={globalSpeedLimit}
+        onClose={() => {
+          setEditDialogOpen(false);
+          setSelectedTrain(null);
+        }}
+        onSaved={load}
+      />
     </main>
   );
 }
