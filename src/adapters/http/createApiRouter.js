@@ -160,6 +160,96 @@ export function createApiRouter({ rollingStockService, socketService, dccClient 
     }
   });
 
+  router.post('/wagons', async (req, res) => {
+    const { Name, Length } = req.body;
+    if (typeof Name !== 'string' || !Name.trim()) {
+      return res.status(400).json({ success: false, message: 'Name is required' });
+    }
+    const len = Number(Length);
+    if (!Number.isFinite(len) || len <= 0) {
+      return res.status(400).json({ success: false, message: 'Length must be a positive number' });
+    }
+    try {
+      const created = await rollingStockService.addWagon(Name.trim(), len);
+      return res.status(201).json({ success: true, data: created });
+    } catch (error) {
+      console.error('Error adding wagon:', error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
+  router.put('/wagons/:wagonId', async (req, res) => {
+    const { wagonId } = req.params;
+    const { Name, Length } = req.body;
+    if (typeof Name !== 'string' || !Name.trim()) {
+      return res.status(400).json({ success: false, message: 'Name is required' });
+    }
+    const len = Number(Length);
+    if (!Number.isFinite(len) || len <= 0) {
+      return res.status(400).json({ success: false, message: 'Length must be a positive number' });
+    }
+    try {
+      const updated = await rollingStockService.updateWagon(wagonId, { Name: Name.trim(), Length: len });
+      return res.status(200).json({ success: true, data: updated });
+    } catch (error) {
+      return res.status(404).json({ success: false, message: error.message });
+    }
+  });
+
+  router.delete('/wagons/:wagonId', async (req, res) => {
+    const { wagonId } = req.params;
+    try {
+      await rollingStockService.removeWagon(wagonId);
+      return res.status(200).json({ success: true, message: 'Wagon removed successfully' });
+    } catch (error) {
+      return res.status(404).json({ success: false, message: error.message });
+    }
+  });
+
+  router.get('/wagons/:wagonId/images', async (req, res) => {
+    const { wagonId } = req.params;
+    try {
+      const images = await rollingStockService.listWagonImages(wagonId);
+      return res.status(200).json({ success: true, data: images });
+    } catch (error) {
+      return res.status(404).json({ success: false, message: error.message });
+    }
+  });
+
+  router.post('/wagons/:wagonId/images', upload.single('image'), async (req, res) => {
+    const { wagonId } = req.params;
+    try {
+      const images = await rollingStockService.addWagonImage(wagonId, req.file);
+      return res.status(201).json({ success: true, data: images });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  router.post('/wagons/:wagonId/images/reorder', async (req, res) => {
+    const { wagonId } = req.params;
+    const { order } = req.body;
+    if (!Array.isArray(order)) {
+      return res.status(400).json({ success: false, message: 'order must be an array of image file names' });
+    }
+    try {
+      const images = await rollingStockService.reorderWagonImages(wagonId, order);
+      return res.status(200).json({ success: true, data: images });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  router.delete('/wagons/:wagonId/images/:imageName', async (req, res) => {
+    const { wagonId, imageName } = req.params;
+    try {
+      const images = await rollingStockService.removeWagonImage(wagonId, imageName);
+      return res.status(200).json({ success: true, data: images });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
   router.post('/settings', async (req, res) => {
     const { settings } = req.body;
     // Clear and readable validation with messages for each possible error
