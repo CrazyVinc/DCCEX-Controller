@@ -55,6 +55,7 @@ export class DccEngine extends EventEmitter {
     const onPower = (power) => this.emit('power', { power });
     const onFunction = (payload) => this.emit('function', payload);
     const onThrottle = (payload) => this.emit('throttle', payload);
+    const onSent = (command) => this.emit('sent', { command });
     const onMessage = (message) => this.emit('message', { message });
     const onError = (error) => this.emit('error', error);
 
@@ -64,6 +65,7 @@ export class DccEngine extends EventEmitter {
       onPower,
       onFunction,
       onThrottle,
+      onSent,
       onMessage,
       onError,
     };
@@ -73,6 +75,7 @@ export class DccEngine extends EventEmitter {
     this.dccClient.on('power', onPower);
     this.dccClient.on('function', onFunction);
     this.dccClient.on('throttle', onThrottle);
+    this.dccClient.on('sent', onSent);
     this.dccClient.on('message', onMessage);
     this.dccClient.on('error', onError);
 
@@ -111,6 +114,10 @@ export class DccEngine extends EventEmitter {
 
   powerOff() {
     this.dccClient.powerOff();
+  }
+
+  emergencyStop() {
+    this.dccClient.emergencyStop();
   }
 
   toggleFunction({ cab, function: fn }) {

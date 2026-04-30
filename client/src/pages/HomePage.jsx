@@ -7,18 +7,68 @@ import { SelectedTrainProvider, useSelectedTrain } from '../context/SelectedTrai
 import { useSocket } from '../context/SocketContext.jsx';
 import { SpeedControls } from '../components/cab/SpeedControls.jsx';
 import { TrainPicker } from '../components/cab/TrainPicker.jsx';
+import { LogPanel } from '../components/cab/LogPanel.jsx';
 
 function ControllerBody({ trains, globalSpeedLimit }) {
   const { selectedCab, setSelectedCab } = useSelectedTrain();
   const speedRef = useRef(null);
   const [meter, setMeter] = useState('0');
   const socket = useSocket();
-  const [testOut, setTestOut] = useState('');
+  const [commandLog, setCommandLog] = useState([]);
+  const pendingInternalCommandsRef = useRef([]);
+
+  const toInternalCommandText = (event, args) => {
+    if (event === 'dcc:send') {
+      return `dcc:send ${JSON.stringify(args[0])}`;
+    }
+    if (args.length === 0) {
+      return event;
+    }
+    return `${event} ${JSON.stringify(args[0])}`;
+  };
 
   useEffect(() => {
-    const onMsg = ({ message }) => setTestOut(message);
+    const originalEmit = socket.emit.bind(socket);
+    socket.emit = (event, ...args) => {
+      if (String(event).startsWith('dcc:')) {
+        pendingInternalCommandsRef.current.push(toInternalCommandText(event, args));
+      }
+      return originalEmit(event, ...args);
+    };
+
+    const onSent = ({ command }) => {
+      const internal = pendingInternalCommandsRef.current.shift() ?? null;
+      setCommandLog((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-${prev.length}`,
+          type: 'send',
+          text: command,
+          raw: command,
+          internal,
+          time: new Date().toLocaleTimeString(),
+        },
+      ]);
+    };
+
+    const onMsg = ({ message }) => {
+      setCommandLog((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-${prev.length}`,
+          type: 'recv',
+          text: message,
+          time: new Date().toLocaleTimeString(),
+        },
+      ]);
+    };
+    socket.on('dcc:sent', onSent);
     socket.on('dcc:message', onMsg);
-    return () => socket.off('dcc:message', onMsg);
+    return () => {
+      socket.emit = originalEmit;
+      socket.off('dcc:sent', onSent);
+      socket.off('dcc:message', onMsg);
+    };
   }, [socket]);
 
   const selectedTrain = trains.find((train) => String(train.DCC_ID) === String(selectedCab));
@@ -45,7 +95,7 @@ function ControllerBody({ trains, globalSpeedLimit }) {
         </div>
 
         <div className="flex flex-row items-start gap-3 md:gap-8">
-          <div className="min-w-0 flex-1 md:w-1/2 [&>div]:!flex-nowrap [&>div]:overflow-x-auto max-md:[&>div]:!justify-start">
+          <div className="min-w-0 flex-1 md:w-1/2 [&>div]:flex-nowrap! [&>div]:overflow-x-auto max-md:[&>div]:justify-start!">
             <SpeedControls ref={speedRef} onMeterChange={setMeter} maxSpeed={effectiveSpeedLimit} />
           </div>
           <div className="w-auto shrink-0 md:w-1/2 md:min-w-0 md:shrink">
@@ -56,51 +106,21 @@ function ControllerBody({ trains, globalSpeedLimit }) {
         <button
           id="dcc-stop"
           type="button"
-          className="mt-5 w-full cursor-pointer rounded-full border-0 bg-linear-to-r from-[#F43F5E] to-[#E11D48] py-2.5 font-sans text-xl font-bold uppercase tracking-wide text-slate-50 shadow-[0_0_24px_rgba(244,63,94,0.42),0_4px_14px_rgba(15,23,42,0.35)] transition-[box-shadow,transform] duration-300 hover:shadow-[0_0_32px_rgba(244,63,94,0.5),0_4px_14px_rgba(15,23,42,0.4)] active:translate-y-px active:shadow-[0_0_18px_rgba(244,63,94,0.35),0_2px_8px_rgba(15,23,42,0.3)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-300/50 sm:py-3 sm:text-2xl"
+          className="mt-5 w-full cursor-pointer rounded-full border-0 bg-linear-to-r from-[#F43F5E] to-[#E11D48] py-2.5 font-sans text-xl font-bold uppercase tracking-wide text-slate-50 shadow-[0_0_24px_rgba(244,63,94,0.42),0_4px_14px_rgba(15,23,42,0.35)] transition-[box-shadow,transform] duration-300 hover:shadow-[0_0_32px_rgba(244,63,94,0.5),0_4px_14px_rgba(15,23,42,0.4)] active:translate-y-px active:shadow-[0_0_18px_rgba(244,63,94,0.35),0_2px_8px_rgba(15,23,42,0.3)] focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-slate-300/50 sm:py-3 sm:text-2xl"
           onClick={() => speedRef.current?.emergencyStop()}
         >
           stop
         </button>
       </Section>
 
-      <Section id="test" title="Test" className="mt-5">
-        <TestPanel socket={socket} output={testOut} setOutput={setTestOut} />
+      <Section id="log" title="Log" className="mt-5">
+        <LogPanel
+          socket={socket}
+          commandLog={commandLog}
+          onClearLog={() => setCommandLog([])}
+        />
       </Section>
     </>
-  );
-}
-
-function TestPanel({ socket, output, setOutput }) {
-  const [cmd, setCmd] = useState('');
-
-  const send = () => {
-    const command = cmd.trim();
-    if (!command) {
-      return;
-    }
-    setOutput('Sending...');
-    socket.emit('dcc:send', command);
-  };
-
-  return (
-    <div className="flex max-w-sm flex-col gap-3">
-      <input
-        type="text"
-        value={cmd}
-        onChange={(e) => setCmd(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && send()}
-        className="rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        placeholder="Type DCC command..."
-      />
-      <button
-        type="button"
-        className="rounded bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700 active:bg-blue-800"
-        onClick={send}
-      >
-        Submit
-      </button>
-      <div className="font-medium text-slate-200">{output}</div>
-    </div>
   );
 }
 

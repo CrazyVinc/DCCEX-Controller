@@ -112,7 +112,7 @@ class RollingStockService {
         if (idx === -1) {
             throw new Error(`Train with DCC_ID ${DCC_ID} not found`);
         }
-        await fs.unlink(`data/rollingstock/trains/${DCC_ID}/info.json`);
+        await rm(`data/rollingstock/trains/${DCC_ID}`, { recursive: true, force: true });
         this.trains = this.trains.filter((train) => String(train.DCC_ID) !== String(DCC_ID));
     }
 

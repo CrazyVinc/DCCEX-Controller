@@ -15,6 +15,7 @@ export function TrainPicker({ trains, selectedCab, onSelect }) {
             className={`${BTN} ${isOn ? ACTIVE.join(' ') : ''}`}
             onClick={() => onSelect(train.DCC_ID)}
           >
+            {train.imageorder.length > 0 && <img src={`/rollingstock-images/trains/${train.DCC_ID}/${train.imageorder[0].name}`} alt={train.Name} className="w-10 h-10" />}
             <span className="px-4 py-2 font-semibold text-slate-100">{train.Name}</span>
             <span className="border-l border-slate-600 bg-slate-900/90 px-3 py-2 font-medium text-slate-300">
               {train.DCC_ID}

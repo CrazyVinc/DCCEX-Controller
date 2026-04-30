@@ -11,6 +11,7 @@ export function setupDccWsAdapter({ socketService, dccEngine }) {
   dccEngine.on('power', (payload) => socketService.emit('dcc:power', payload));
   dccEngine.on('function', (payload) => socketService.emit('dcc:function', payload));
   dccEngine.on('throttle', (payload) => socketService.emit('dcc:throttle', payload));
+  dccEngine.on('sent', (payload) => socketService.emit('dcc:sent', payload));
   dccEngine.on('message', (payload) => socketService.emit('dcc:message', payload));
 
   socketService.onConnection((socket) => {
@@ -38,6 +39,10 @@ export function setupDccWsAdapter({ socketService, dccEngine }) {
 
     socket.on('dcc:power:off', () => {
       dccEngine.powerOff();
+    });
+
+    socket.on('dcc:emergency-stop', () => {
+      dccEngine.emergencyStop();
     });
   });
 }

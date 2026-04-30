@@ -106,6 +106,7 @@ class DccExClient extends EventEmitter {
         }
 
         const formatted = `<${trimmed}>`;
+        this.emit('sent', formatted);
 
         this.queue.push(formatted);
         this._flushQueue();
