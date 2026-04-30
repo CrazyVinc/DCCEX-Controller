@@ -3,11 +3,22 @@ import { randomUUID } from 'crypto';
 import { mkdir, readdir, rename, rm, unlink, writeFile } from 'fs/promises';
 import path from 'path';
 
+function withImageOrder(entity) {
+    return {
+        ...entity,
+        imageorder: Array.isArray(entity.imageorder) ? entity.imageorder : [],
+    };
+}
+
 class RollingStockService {
     //readdirsync returns an array of file names in the directory, we can use that to read each info.json and parse it into an object
     constructor() {
-        this.trains = fs.readdirSync('data/rollingstock/trains').map((dir) => JSON.parse(fs.readFileSync(`data/rollingstock/trains/${dir}/info.json`, 'utf-8')));
-        this.wagons = fs.readdirSync('data/rollingstock/wagons').map((dir) => JSON.parse(fs.readFileSync(`data/rollingstock/wagons/${dir}/info.json`, 'utf-8')));
+        this.trains = fs.readdirSync('data/rollingstock/trains').map((dir) =>
+            withImageOrder(JSON.parse(fs.readFileSync(`data/rollingstock/trains/${dir}/info.json`, 'utf-8'))),
+        );
+        this.wagons = fs.readdirSync('data/rollingstock/wagons').map((dir) =>
+            withImageOrder(JSON.parse(fs.readFileSync(`data/rollingstock/wagons/${dir}/info.json`, 'utf-8'))),
+        );
     } 
 
     getTrains() {
