@@ -18,11 +18,24 @@ export class DccEngine extends EventEmitter {
     const trains = this.rollingStockService.getRollingStock().trains;
     const startupFunctionKeys = settings.FunctionOnStarts.keys;
 
+    const rosterFn = (raw) => {
+      const token = String(raw).trim();
+      if (!token) {
+        return null;
+      }
+      const n = Number(token.toUpperCase().startsWith('F') ? token.slice(1) : token);
+      return Number.isInteger(n) && n >= 0 ? n : null;
+    };
+
     trains.forEach((train) => {
       const cab = train.DCC_ID;
+      const rosterFns = new Set(
+        train.Functions.map(rosterFn).filter((n) => n != null),
+      );
       startupFunctionKeys.forEach((fn) => {
-        if (train.Functions.includes(fn)) {
-          this.dccClient.toggleFunction(cab, fn, 1);
+        const fnNum = rosterFn(fn);
+        if (fnNum != null && rosterFns.has(fnNum)) {
+          this.dccClient.toggleFunction(cab, fnNum, 1);
         }
       });
     });
