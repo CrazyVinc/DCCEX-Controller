@@ -69,7 +69,7 @@ export function AddTrainDialog({ open, onClose, onSaved }) {
       Meta: JSON.parse(form.metadataJson.value || '{}'),
     };
 
-    const response = await fetch('/api/addTrain', {
+    const response = await fetch('/api/trains', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

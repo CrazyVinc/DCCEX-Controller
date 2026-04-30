@@ -10,6 +10,24 @@ export class DccEngine extends EventEmitter {
     this.boundHandlers = null;
   }
 
+  applyStartupFunctions(settings) {
+    if (!settings?.FunctionOnStarts?.enabled) {
+      return;
+    }
+
+    const trains = this.rollingStockService.getRollingStock().trains;
+    const startupFunctionKeys = settings.FunctionOnStarts.keys;
+
+    trains.forEach((train) => {
+      const cab = train.DCC_ID;
+      startupFunctionKeys.forEach((fn) => {
+        if (train.Functions.includes(fn)) {
+          this.dccClient.toggleFunction(cab, fn, 1);
+        }
+      });
+    });
+  }
+
   start() {
     if (this.started) {
       return;
@@ -29,7 +47,10 @@ export class DccEngine extends EventEmitter {
     const startupCabs = rollingStock.trains.map((train) => train.DCC_ID);
     this.dccClient.setStartupCabs(startupCabs);
 
-    const onConnect = () => this.emit('connect');
+    const onConnect = () => {
+      this.applyStartupFunctions(settings);
+      this.emit('connect');
+    };
     const onDisconnect = () => this.emit('disconnect');
     const onPower = (power) => this.emit('power', { power });
     const onFunction = (payload) => this.emit('function', payload);
@@ -58,18 +79,6 @@ export class DccEngine extends EventEmitter {
     this.dccClient.connect();
     this.started = true;
 
-    if (settings?.FunctionOnStarts?.enabled) {
-      const trains = this.rollingStockService.getRollingStock().trains;
-      const cabs = trains.map((train) => train.DCC_ID);
-
-      cabs.forEach((cab) => {
-        const train = trains.find((t) => t.DCC_ID === cab);
-
-        settings.FunctionOnStarts.keys.forEach((fn) => {
-          if (train.Functions.includes(fn)) this.dccClient.toggleFunction(cab, fn, 1);
-        });
-      });
-    }
   }
 
   getRollingStock() {

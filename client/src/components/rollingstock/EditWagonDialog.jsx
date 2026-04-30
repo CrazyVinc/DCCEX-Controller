@@ -46,7 +46,7 @@ export function EditWagonDialog({ open, wagon, initialTab = 'details', onClose, 
     });
   }, [open, wagon?.id, initialTab]);
 
-  const loadImages = async () => {
+  const loadImages = async (preferredName = null) => {
     if (!wagon) {
       return;
     }
@@ -56,6 +56,15 @@ export function EditWagonDialog({ open, wagon, initialTab = 'details', onClose, 
     }
     const data = await response.json();
     setImages(data.data);
+    if (!data.data.length) {
+      setSelectedImageIndex(0);
+      return;
+    }
+    if (preferredName) {
+      const nextSelectedIndex = data.data.findIndex((image) => image.name === preferredName);
+      setSelectedImageIndex(nextSelectedIndex === -1 ? 0 : nextSelectedIndex);
+      return;
+    }
     setSelectedImageIndex(0);
   };
 
@@ -81,7 +90,7 @@ export function EditWagonDialog({ open, wagon, initialTab = 'details', onClose, 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ order: next.map((image) => image.name) }),
     });
-    await loadImages();
+    await loadImages(current.name);
     await onSaved();
   };
 
@@ -115,6 +124,33 @@ export function EditWagonDialog({ open, wagon, initialTab = 'details', onClose, 
       }
       return Math.min(currentIndex, images.length - 2);
     });
+  };
+
+  const renameImage = async (index) => {
+    const image = images[index];
+    if (!image) {
+      return;
+    }
+    const currentBase = image.name.replace(/\.[^/.]+$/, '');
+    const newBaseName = window.prompt('New image name (without extension):', currentBase);
+    if (newBaseName === null) {
+      return;
+    }
+    const trimmedName = newBaseName.trim();
+    if (!trimmedName || trimmedName === currentBase) {
+      return;
+    }
+    const response = await fetch(`/api/wagons/${wagon.id}/images/rename`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldName: image.name, newName: trimmedName }),
+    });
+    if (!response.ok) {
+      return;
+    }
+    const ext = image.name.match(/\.[^/.]+$/)?.[0] ?? '';
+    await loadImages(`${trimmedName}${ext}`);
+    await onSaved();
   };
 
   const saveDetails = async () => {
@@ -269,6 +305,13 @@ export function EditWagonDialog({ open, wagon, initialTab = 'details', onClose, 
                     className="rounded border border-rose-700 px-2 py-1 text-xs text-rose-300 hover:bg-rose-900/30"
                   >
                     Delete
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => renameImage(index)}
+                    className="rounded border border-sky-700 px-2 py-1 text-xs text-sky-300 hover:bg-sky-900/30"
+                  >
+                    Rename
                   </button>
                 </div>
               </div>

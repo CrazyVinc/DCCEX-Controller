@@ -38,6 +38,7 @@ class RollingStockService {
 
     async addTrain(DCC_ID, Name, Length, Speed = {}, startDelay, Functions, Notes, Meta = {}, SpeedLimit = 127) {
         const { Duration, Distance, Step, calculated } = Speed;
+        const existingTrain = this.getTrainById(DCC_ID);
         const trainData = {
             DCC_ID,
             Name,
@@ -46,7 +47,8 @@ class RollingStockService {
             startDelay,
             Functions,
             Notes,
-            Meta
+            Meta,
+            imageorder: existingTrain?.imageorder ?? [],
         };
         const dataPath = `data/rollingstock/trains/${DCC_ID}`;
 
@@ -118,58 +120,112 @@ class RollingStockService {
         return `data/rollingstock/trains/${DCC_ID}`;
     }
 
-    parseImageOrder(fileName) {
-        const match = /^image(\d{3})\.[a-z0-9]+$/i.exec(fileName);
-        if (!match) {
-            return Number.MAX_SAFE_INTEGER;
+    getTrainById(DCC_ID) {
+        return this.trains.find((train) => String(train.DCC_ID) === String(DCC_ID));
+    }
+
+    getWagonById(wagonId) {
+        return this.wagons.find((wagon) => String(wagon.id) === String(wagonId));
+    }
+
+    getImageOrderNames(entity) {
+        return (entity.imageorder ?? []).map((entry) => entry.name);
+    }
+
+    setImageOrder(entity, names) {
+        entity.imageorder = names.map((name) => ({ name }));
+    }
+
+    sortImageNamesByOrder(imageNames, orderedNames) {
+        const orderIndex = new Map(orderedNames.map((name, index) => [name, index]));
+        const inOrder = imageNames
+            .filter((name) => orderIndex.has(name))
+            .sort((a, b) => orderIndex.get(a) - orderIndex.get(b));
+        const unordered = imageNames
+            .filter((name) => !orderIndex.has(name))
+            .sort((a, b) => a.localeCompare(b));
+        return [...inOrder, ...unordered];
+    }
+
+    async persistTrainInfo(DCC_ID, trainData) {
+        const dataPath = `data/rollingstock/trains/${DCC_ID}`;
+        await writeFile(`${dataPath}/info.json`, JSON.stringify(trainData, null, 2), 'utf-8');
+    }
+
+    async persistWagonInfo(wagonId, wagonData) {
+        const dataPath = `data/rollingstock/wagons/${wagonId}`;
+        await writeFile(`${dataPath}/info.json`, JSON.stringify(wagonData, null, 2), 'utf-8');
+    }
+
+    isImageFileName(name) {
+        return /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(name);
+    }
+
+    sanitizeImageBaseName(name) {
+        return String(name).trim().replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
+    }
+
+    ensureImageExtension(ext) {
+        const cleaned = String(ext || '').toLowerCase().replace(/[^a-z0-9.]/g, '');
+        if (!cleaned) {
+            return '.jpg';
         }
-        return Number(match[1]);
+        return cleaned.startsWith('.') ? cleaned : `.${cleaned}`;
+    }
+
+    async buildOrderedImageList(imageDir, orderedNames, baseUrl) {
+        await mkdir(imageDir, { recursive: true });
+        const files = await readdir(imageDir);
+        const imageNames = files.filter((name) => this.isImageFileName(name));
+        const namesInOrder = this.sortImageNamesByOrder(imageNames, orderedNames);
+        return namesInOrder.map((name, index) => ({
+            name,
+            order: index + 1,
+            url: `${baseUrl}/${name}`,
+        }));
     }
 
     async listTrainImages(DCC_ID) {
+        const train = this.getTrainById(DCC_ID);
+        if (!train) {
+            throw new Error(`Train with DCC_ID ${DCC_ID} not found`);
+        }
         const imagesDir = this.getTrainImagesDir(DCC_ID);
-        await mkdir(imagesDir, { recursive: true });
-        const files = await readdir(imagesDir);
-        const imageFiles = files
-            .filter((name) => /^image\d{3}\.[a-z0-9]+$/i.test(name))
-            .sort((a, b) => this.parseImageOrder(a) - this.parseImageOrder(b));
-
-        return imageFiles.map((name, index) => ({
-            name,
-            order: index + 1,
-            url: `/rollingstock-images/trains/${DCC_ID}/${name}`,
-        }));
+        const images = await this.buildOrderedImageList(imagesDir, this.getImageOrderNames(train), `/rollingstock-images/trains/${DCC_ID}`);
+        this.setImageOrder(train, images.map((image) => image.name));
+        await this.persistTrainInfo(DCC_ID, train);
+        return images;
     }
 
     async addTrainImage(DCC_ID, file) {
         if (!file) {
             throw new Error('Image file is required');
         }
-        const existingTrain = this.trains.find((train) => String(train.DCC_ID) === String(DCC_ID));
+        const existingTrain = this.getTrainById(DCC_ID);
         if (!existingTrain) {
             throw new Error(`Train with DCC_ID ${DCC_ID} not found`);
         }
 
-        const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-        const safeExt = ext.replace(/[^.a-z0-9]/g, '');
+        const ext = this.ensureImageExtension(path.extname(file.originalname));
         const imagesDir = this.getTrainImagesDir(DCC_ID);
         await mkdir(imagesDir, { recursive: true });
         const currentImages = await this.listTrainImages(DCC_ID);
         const nextOrder = currentImages.length + 1;
-        const nextName = `image${String(nextOrder).padStart(3, '0')}${safeExt}`;
+        const nextName = `image-${nextOrder}${ext}`;
         const targetPath = path.join(imagesDir, nextName);
 
         await writeFile(targetPath, file.buffer);
+        this.setImageOrder(existingTrain, [...currentImages.map((image) => image.name), nextName]);
+        await this.persistTrainInfo(DCC_ID, existingTrain);
         return this.listTrainImages(DCC_ID);
     }
 
     async reorderTrainImages(DCC_ID, orderedNames) {
-        const existingTrain = this.trains.find((train) => String(train.DCC_ID) === String(DCC_ID));
+        const existingTrain = this.getTrainById(DCC_ID);
         if (!existingTrain) {
             throw new Error(`Train with DCC_ID ${DCC_ID} not found`);
         }
 
-        const imagesDir = this.getTrainImagesDir(DCC_ID);
         const existingImages = await this.listTrainImages(DCC_ID);
         const existingNames = existingImages.map((image) => image.name);
         if (existingNames.length !== orderedNames.length) {
@@ -178,32 +234,48 @@ class RollingStockService {
         if (!existingNames.every((name) => orderedNames.includes(name))) {
             throw new Error('Image reorder payload contains invalid file names');
         }
+        this.setImageOrder(existingTrain, orderedNames);
+        await this.persistTrainInfo(DCC_ID, existingTrain);
+        return this.listTrainImages(DCC_ID);
+    }
 
-        const tmpPrefix = `tmp_${Date.now()}`;
-        const tmpFiles = [];
-        for (let i = 0; i < orderedNames.length; i += 1) {
-            const oldName = orderedNames[i];
-            const ext = path.extname(oldName).toLowerCase();
-            const tmpName = `${tmpPrefix}_${i + 1}${ext}`;
-            await rename(path.join(imagesDir, oldName), path.join(imagesDir, tmpName));
-            tmpFiles.push({ tmpName, ext });
+    async renameTrainImage(DCC_ID, oldName, newName) {
+        const existingTrain = this.getTrainById(DCC_ID);
+        if (!existingTrain) {
+            throw new Error(`Train with DCC_ID ${DCC_ID} not found`);
         }
-
-        for (let i = 0; i < tmpFiles.length; i += 1) {
-            const finalName = `image${String(i + 1).padStart(3, '0')}${tmpFiles[i].ext}`;
-            await rename(path.join(imagesDir, tmpFiles[i].tmpName), path.join(imagesDir, finalName));
+        const imagesDir = this.getTrainImagesDir(DCC_ID);
+        const images = await this.listTrainImages(DCC_ID);
+        const existingNames = images.map((image) => image.name);
+        if (!existingNames.includes(oldName)) {
+            throw new Error('Image file not found');
         }
-
+        const ext = this.ensureImageExtension(path.extname(oldName));
+        const safeBaseName = this.sanitizeImageBaseName(newName);
+        if (!safeBaseName) {
+            throw new Error('newName cannot be empty');
+        }
+        const finalName = `${safeBaseName}${ext}`;
+        if (existingNames.includes(finalName) && finalName !== oldName) {
+            throw new Error('Image name already exists');
+        }
+        await rename(path.join(imagesDir, oldName), path.join(imagesDir, finalName));
+        this.setImageOrder(existingTrain, existingNames.map((name) => (name === oldName ? finalName : name)));
+        await this.persistTrainInfo(DCC_ID, existingTrain);
         return this.listTrainImages(DCC_ID);
     }
 
     async removeTrainImage(DCC_ID, imageName) {
+        const existingTrain = this.getTrainById(DCC_ID);
+        if (!existingTrain) {
+            throw new Error(`Train with DCC_ID ${DCC_ID} not found`);
+        }
         const imagesDir = this.getTrainImagesDir(DCC_ID);
         const imagePath = path.join(imagesDir, imageName);
         await unlink(imagePath);
         const currentImages = await this.listTrainImages(DCC_ID);
-        const namesInOrder = currentImages.map((image) => image.name);
-        await this.reorderTrainImages(DCC_ID, namesInOrder);
+        this.setImageOrder(existingTrain, currentImages.map((image) => image.name));
+        await this.persistTrainInfo(DCC_ID, existingTrain);
         return this.listTrainImages(DCC_ID);
     }
 
@@ -248,49 +320,46 @@ class RollingStockService {
     }
 
     async listWagonImages(wagonId) {
+        const wagon = this.getWagonById(wagonId);
+        if (!wagon) {
+            throw new Error(`Wagon ${wagonId} not found`);
+        }
         const imagesDir = this.getWagonImagesDir(wagonId);
-        await mkdir(imagesDir, { recursive: true });
-        const files = await readdir(imagesDir);
-        const imageFiles = files
-            .filter((name) => /^image\d{3}\.[a-z0-9]+$/i.test(name))
-            .sort((a, b) => this.parseImageOrder(a) - this.parseImageOrder(b));
-
-        return imageFiles.map((name, index) => ({
-            name,
-            order: index + 1,
-            url: `/rollingstock-images/wagons/${wagonId}/${name}`,
-        }));
+        const images = await this.buildOrderedImageList(imagesDir, this.getImageOrderNames(wagon), `/rollingstock-images/wagons/${wagonId}`);
+        this.setImageOrder(wagon, images.map((image) => image.name));
+        await this.persistWagonInfo(wagonId, wagon);
+        return images;
     }
 
     async addWagonImage(wagonId, file) {
         if (!file) {
             throw new Error('Image file is required');
         }
-        const existing = this.wagons.find((w) => String(w.id) === String(wagonId));
+        const existing = this.getWagonById(wagonId);
         if (!existing) {
             throw new Error(`Wagon ${wagonId} not found`);
         }
 
-        const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-        const safeExt = ext.replace(/[^.a-z0-9]/g, '');
+        const ext = this.ensureImageExtension(path.extname(file.originalname));
         const imagesDir = this.getWagonImagesDir(wagonId);
         await mkdir(imagesDir, { recursive: true });
         const currentImages = await this.listWagonImages(wagonId);
         const nextOrder = currentImages.length + 1;
-        const nextName = `image${String(nextOrder).padStart(3, '0')}${safeExt}`;
+        const nextName = `image-${nextOrder}${ext}`;
         const targetPath = path.join(imagesDir, nextName);
 
         await writeFile(targetPath, file.buffer);
+        this.setImageOrder(existing, [...currentImages.map((image) => image.name), nextName]);
+        await this.persistWagonInfo(wagonId, existing);
         return this.listWagonImages(wagonId);
     }
 
     async reorderWagonImages(wagonId, orderedNames) {
-        const existing = this.wagons.find((w) => String(w.id) === String(wagonId));
+        const existing = this.getWagonById(wagonId);
         if (!existing) {
             throw new Error(`Wagon ${wagonId} not found`);
         }
 
-        const imagesDir = this.getWagonImagesDir(wagonId);
         const existingImages = await this.listWagonImages(wagonId);
         const existingNames = existingImages.map((image) => image.name);
         if (existingNames.length !== orderedNames.length) {
@@ -300,31 +369,48 @@ class RollingStockService {
             throw new Error('Image reorder payload contains invalid file names');
         }
 
-        const tmpPrefix = `tmp_${Date.now()}`;
-        const tmpFiles = [];
-        for (let i = 0; i < orderedNames.length; i += 1) {
-            const oldName = orderedNames[i];
-            const ext = path.extname(oldName).toLowerCase();
-            const tmpName = `${tmpPrefix}_${i + 1}${ext}`;
-            await rename(path.join(imagesDir, oldName), path.join(imagesDir, tmpName));
-            tmpFiles.push({ tmpName, ext });
-        }
+        this.setImageOrder(existing, orderedNames);
+        await this.persistWagonInfo(wagonId, existing);
+        return this.listWagonImages(wagonId);
+    }
 
-        for (let i = 0; i < tmpFiles.length; i += 1) {
-            const finalName = `image${String(i + 1).padStart(3, '0')}${tmpFiles[i].ext}`;
-            await rename(path.join(imagesDir, tmpFiles[i].tmpName), path.join(imagesDir, finalName));
+    async renameWagonImage(wagonId, oldName, newName) {
+        const existing = this.getWagonById(wagonId);
+        if (!existing) {
+            throw new Error(`Wagon ${wagonId} not found`);
         }
-
+        const imagesDir = this.getWagonImagesDir(wagonId);
+        const images = await this.listWagonImages(wagonId);
+        const existingNames = images.map((image) => image.name);
+        if (!existingNames.includes(oldName)) {
+            throw new Error('Image file not found');
+        }
+        const ext = this.ensureImageExtension(path.extname(oldName));
+        const safeBaseName = this.sanitizeImageBaseName(newName);
+        if (!safeBaseName) {
+            throw new Error('newName cannot be empty');
+        }
+        const finalName = `${safeBaseName}${ext}`;
+        if (existingNames.includes(finalName) && finalName !== oldName) {
+            throw new Error('Image name already exists');
+        }
+        await rename(path.join(imagesDir, oldName), path.join(imagesDir, finalName));
+        this.setImageOrder(existing, existingNames.map((name) => (name === oldName ? finalName : name)));
+        await this.persistWagonInfo(wagonId, existing);
         return this.listWagonImages(wagonId);
     }
 
     async removeWagonImage(wagonId, imageName) {
+        const existing = this.getWagonById(wagonId);
+        if (!existing) {
+            throw new Error(`Wagon ${wagonId} not found`);
+        }
         const imagesDir = this.getWagonImagesDir(wagonId);
         const imagePath = path.join(imagesDir, imageName);
         await unlink(imagePath);
         const currentImages = await this.listWagonImages(wagonId);
-        const namesInOrder = currentImages.map((image) => image.name);
-        await this.reorderWagonImages(wagonId, namesInOrder);
+        this.setImageOrder(existing, currentImages.map((image) => image.name));
+        await this.persistWagonInfo(wagonId, existing);
         return this.listWagonImages(wagonId);
     }
 
