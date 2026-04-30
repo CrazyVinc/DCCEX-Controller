@@ -44,7 +44,11 @@ function SpeedColumn({ ariaLabel, accentBorder, accentShadow, value, onChange, i
           aria-hidden="true"
         >
           {speedStepLabels.map((s) => (
-            <span key={s} className="leading-none">
+            <span
+              key={s}
+              className="leading-none cursor-pointer hover:text-amber-400"
+              onClick={() => onChange(Number(s))}
+            >
               {s}
             </span>
           ))}
