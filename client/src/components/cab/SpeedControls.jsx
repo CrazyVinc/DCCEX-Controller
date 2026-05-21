@@ -12,19 +12,109 @@ function getSpeedStepLabels(maxSpeed) {
   ];
 }
 
+/** Top of track = max speed, bottom = 0 (same as tick labels). */
+function clientYToSpeed(trackEl, clientY, maxSpeed) {
+  const rect = trackEl.getBoundingClientRect();
+  const h = rect.height;
+  if (h <= 0) {
+    return 0;
+  }
+  const y = clientY - rect.top;
+  const fraction = Math.max(0, Math.min(1, 1 - y / h));
+  return Math.round(fraction * maxSpeed);
+}
+
 const forwardClass =
   'absolute left-1/2 top-1/2 w-96 max-w-none -translate-x-1/2 -translate-y-1/2 -rotate-90 cursor-pointer appearance-none accent-emerald-500 h-14 [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-[16px] [&::-webkit-slider-thumb]:h-10 [&::-webkit-slider-thumb]:w-14 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-xl [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-slate-700 [&::-webkit-slider-thumb]:bg-emerald-400 [&::-webkit-slider-thumb]:shadow-[0_0_16px_rgba(52,211,153,0.85),0_2px_8px_rgba(0,0,0,0.45)] [&::-moz-range-track]:h-2 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-transparent [&::-moz-range-thumb]:h-10 [&::-moz-range-thumb]:w-14 [&::-moz-range-thumb]:rounded-xl [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-slate-700 [&::-moz-range-thumb]:bg-emerald-400 [&::-moz-range-thumb]:shadow-[0_0_16px_rgba(52,211,153,0.85),0_2px_8px_rgba(0,0,0,0.45)]';
 
 const reverseClass =
   'absolute left-1/2 top-1/2 w-96 max-w-none -translate-x-1/2 -translate-y-1/2 -rotate-90 cursor-pointer appearance-none accent-rose-500 h-14 [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-[16px] [&::-webkit-slider-thumb]:h-10 [&::-webkit-slider-thumb]:w-14 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-xl [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-slate-700 [&::-webkit-slider-thumb]:bg-rose-400 [&::-webkit-slider-thumb]:shadow-[0_0_16px_rgba(251,113,133,0.85),0_2px_8px_rgba(0,0,0,0.45)] [&::-moz-range-track]:h-2 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-transparent [&::-moz-range-thumb]:h-10 [&::-moz-range-thumb]:w-14 [&::-moz-range-thumb]:rounded-xl [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-slate-700 [&::-moz-range-thumb]:bg-rose-400 [&::-moz-range-thumb]:shadow-[0_0_16px_rgba(251,113,133,0.85),0_2px_8px_rgba(0,0,0,0.45)]';
 
+function readScrubOverlay() {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return false;
+  }
+  if (navigator.maxTouchPoints > 0) {
+    return true;
+  }
+  return window.matchMedia('(pointer: coarse)').matches;
+}
+
 function SpeedColumn({ ariaLabel, accentBorder, accentShadow, value, onChange, inputClass, maxSpeed }) {
+  const trackRef = useRef(null);
+  const onChangeRef = useRef(onChange);
+  const maxSpeedRef = useRef(maxSpeed);
+  const dragCleanupRef = useRef(null);
+  const [scrubOverlay, setScrubOverlay] = useState(readScrubOverlay);
   const speedStepLabels = getSpeedStepLabels(maxSpeed);
+
+  onChangeRef.current = onChange;
+  maxSpeedRef.current = maxSpeed;
+
+  useEffect(() => {
+    const mq = window.matchMedia('(pointer: coarse)');
+    const sync = () => {
+      setScrubOverlay(navigator.maxTouchPoints > 0 || mq.matches);
+    };
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      dragCleanupRef.current?.();
+      dragCleanupRef.current = null;
+    };
+  }, []);
+
+  const onOverlayPointerDown = (e) => {
+    const track = trackRef.current;
+    if (!track) {
+      return;
+    }
+    dragCleanupRef.current?.();
+    const pointerId = e.pointerId;
+
+    const move = (ev) => {
+      if (ev.pointerId !== pointerId) {
+        return;
+      }
+      if (ev.cancelable) {
+        ev.preventDefault();
+      }
+      const t = trackRef.current;
+      if (!t) {
+        return;
+      }
+      onChangeRef.current(clientYToSpeed(t, ev.clientY, maxSpeedRef.current));
+    };
+
+    const end = (ev) => {
+      if (ev.pointerId !== pointerId) {
+        return;
+      }
+      dragCleanupRef.current?.();
+      dragCleanupRef.current = null;
+    };
+
+    dragCleanupRef.current = () => {
+      window.removeEventListener('pointermove', move, true);
+      window.removeEventListener('pointerup', end, true);
+      window.removeEventListener('pointercancel', end, true);
+    };
+
+    window.addEventListener('pointermove', move, { capture: true, passive: false });
+    window.addEventListener('pointerup', end, { capture: true });
+    window.addEventListener('pointercancel', end, { capture: true });
+
+    onChangeRef.current(clientYToSpeed(track, e.clientY, maxSpeedRef.current));
+  };
 
   return (
     <div className="flex flex-col items-center">
       <div className="flex items-stretch gap-4 rounded-3xl border border-slate-700/90 bg-slate-900/95 px-5 py-6 shadow-[inset_0_1px_0_0_rgba(148,163,184,0.08)] sm:gap-5 sm:px-6">
-        <div className="relative h-96 w-13 shrink-0 sm:h-112 sm:w-15">
+        <div ref={trackRef} className="relative h-96 w-13 shrink-0 sm:h-112 sm:w-15">
           <div
             className={`pointer-events-none absolute inset-0 rounded-full border-2 ${accentBorder} bg-black/85 ${accentShadow}`}
           />
@@ -35,9 +125,16 @@ function SpeedColumn({ ariaLabel, accentBorder, accentShadow, value, onChange, i
             step={1}
             value={value}
             aria-label={ariaLabel}
-            className={inputClass}
+            className={scrubOverlay ? `${inputClass} pointer-events-none` : inputClass}
             onChange={(e) => onChange(Number(e.target.value))}
           />
+          {scrubOverlay ? (
+            <div
+              className="absolute inset-0 z-10 cursor-pointer touch-none"
+              aria-hidden="true"
+              onPointerDown={onOverlayPointerDown}
+            />
+          ) : null}
         </div>
         <div
           className="flex h-96 min-w-8 flex-col justify-between py-0.5 text-left font-mono text-xs tabular-nums tracking-wide text-slate-400 select-none sm:h-112 sm:min-w-9"
