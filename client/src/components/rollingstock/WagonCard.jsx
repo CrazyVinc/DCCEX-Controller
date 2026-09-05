@@ -1,3 +1,9 @@
+const WAGON_SERVICE_CLASS_LABEL = {
+  passenger: 'Passenger',
+  goods: 'Goods / industry',
+  other: 'Other',
+};
+
 export function WagonCard({ wagon, thumbnailUrl = null, onCardClick, onImageClick }) {
   const handleCardClick = (event) => {
     if (!onCardClick) {
@@ -22,6 +28,12 @@ export function WagonCard({ wagon, thumbnailUrl = null, onCardClick, onImageClic
             <p>
               <span className="text-slate-400">Length</span>{' '}
               <span className="font-semibold text-slate-200">{wagon.Length} mm</span>
+            </p>
+            <p>
+              <span className="text-slate-400">Class</span>{' '}
+              <span className="font-semibold text-slate-200">
+                {WAGON_SERVICE_CLASS_LABEL[wagon.serviceClass] ?? 'Other'}
+              </span>
             </p>
           </div>
         </div>

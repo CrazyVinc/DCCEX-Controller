@@ -37,6 +37,7 @@ export function AddWagonDialog({ open, onClose, onSaved }) {
     const payload = {
       Name: form.wagonName.value.trim(),
       Length: parseNum(form.lengthMm.value),
+      serviceClass: form.serviceClass.value,
     };
 
     const response = await fetch('/api/wagons', {
@@ -94,6 +95,19 @@ export function AddWagonDialog({ open, onClose, onSaved }) {
               required
               className="rounded-md border border-slate-700/80 bg-slate-900/40 px-3 py-2 text-sm text-slate-200 focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-400"
             />
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs uppercase tracking-wide text-slate-400">
+            Service class
+            <select
+              id="wagon-service-class"
+              name="serviceClass"
+              defaultValue="other"
+              className="rounded-md border border-slate-700/80 bg-slate-900/40 px-3 py-2 text-sm text-slate-200 focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-400"
+            >
+              <option value="passenger">Passenger</option>
+              <option value="goods">Goods / industry</option>
+              <option value="other">Other</option>
+            </select>
           </label>
         </form>
         <footer className="flex shrink-0 justify-end gap-3 border-t border-slate-700/80 px-5 py-4">

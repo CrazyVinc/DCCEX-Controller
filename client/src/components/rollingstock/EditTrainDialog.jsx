@@ -20,6 +20,7 @@ export function EditTrainDialog({ open, train, initialTab = 'details', onClose, 
     Functions: '',
     Notes: '',
     Meta: '{}',
+    serviceClass: 'other',
   });
   const [images, setImages] = useState([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -64,6 +65,7 @@ export function EditTrainDialog({ open, train, initialTab = 'details', onClose, 
       Functions: (train.Functions ?? []).join(', '),
       Notes: train.Notes ?? '',
       Meta: JSON.stringify(train.Meta ?? {}, null, 2),
+      serviceClass: train.serviceClass ?? 'other',
     });
     setSpeedCabValue(Number(train.Speed?.limit ?? TRAIN_SPEED_LIMIT_MAX));
     // Intentionally not depending on `train` identity: parent `load()` replaces the object after saves while the dialog stays open.
@@ -223,6 +225,7 @@ export function EditTrainDialog({ open, train, initialTab = 'details', onClose, 
         .filter((f) => f !== ''),
       Notes: formValues.Notes,
       Meta: JSON.parse(formValues.Meta || '{}'),
+      serviceClass: formValues.serviceClass,
     };
     const response = await fetch(`/api/trains/${train.DCC_ID}`, {
       method: 'PUT',
@@ -307,6 +310,19 @@ export function EditTrainDialog({ open, train, initialTab = 'details', onClose, 
                   onChange={(event) => setFormValues({ ...formValues, Length: event.target.value })}
                   className="rounded-md border border-slate-700/80 bg-slate-900/40 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
                 />
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs uppercase tracking-wide text-slate-400">
+                Service class
+                <select
+                  value={formValues.serviceClass ?? 'other'}
+                  onChange={(event) => setFormValues({ ...formValues, serviceClass: event.target.value })}
+                  className="rounded-md border border-slate-700/80 bg-slate-900/40 px-3 py-2 text-sm text-slate-200 focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                >
+                  <option value="passenger">Passenger</option>
+                  <option value="goods">Goods / industry</option>
+                  <option value="mixed">Mixed</option>
+                  <option value="other">Other</option>
+                </select>
               </label>
             </div>
 

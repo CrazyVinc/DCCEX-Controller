@@ -1,0 +1,139 @@
+.live-main {
+  grid-template-columns: minmax(0, 1fr) 22rem;
+}
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 1.6rem;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--surface-border);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.live-badge.is-ok {
+  border-color: rgb(34 197 94 / 0.5);
+  color: #86efac;
+}
+
+.live-badge.is-bad {
+  border-color: rgb(244 63 94 / 0.5);
+  color: #fda4af;
+}
+
+.live-safety-normal {
+  border-color: rgb(34 197 94 / 0.5);
+  color: #86efac;
+}
+
+.live-safety-degraded {
+  border-color: rgb(245 158 11 / 0.6);
+  color: #fcd34d;
+}
+
+.live-drive-error {
+  color: #fecaca;
+}
+
+.live-safety-emergency {
+  border-color: rgb(239 68 68 / 0.8);
+  background: rgb(239 68 68 / 0.2);
+  color: #fecaca;
+}
+
+.live-trains {
+  list-style: none;
+  margin: 0.3rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.live-trains li {
+  border: 1px solid var(--surface-border);
+  border-radius: 0.4rem;
+  background: #111a2e;
+  padding: 0.25rem 0.45rem 0.35rem;
+}
+
+.live-trains li.is-selected {
+  border-color: var(--accent);
+}
+
+.live-train-head {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.2rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--page-fg);
+  text-align: left;
+  cursor: pointer;
+}
+
+.live-train-name {
+  font-weight: 600;
+}
+
+.live-train-meta {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.live-placement {
+  margin: 0.4rem 0;
+  padding: 0.5rem;
+  border: 1px solid rgb(56 189 248 / 0.5);
+  border-radius: 0.4rem;
+  background: rgb(56 189 248 / 0.08);
+}
+
+.live-placement p {
+  margin: 0 0 0.4rem;
+}
+
+.live-layers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.1rem 0.5rem;
+}
+
+.live-units {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.live-units li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.live-units li > span {
+  flex: 1 1 auto;
+}
+
+.live-units button,
+.live-editor select,
+.live-editor .designer-actions button {
+  height: 1.7rem;
+  min-width: 1.7rem;
+  padding: 0 0.4rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.3rem;
+  background: #0b1220;
+  color: var(--page-fg);
+  cursor: pointer;
+}

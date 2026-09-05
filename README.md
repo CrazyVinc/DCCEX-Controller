@@ -1,91 +1,81 @@
 # DCCEX-Controller
 
-Web UI and Socket.IO bridge for controlling a **DCC-EX** command station over TCP. The server keeps a **long-running connection** to the layout: it starts when the process starts, not when a browser tab opens.
+Server-controlled H0 model railway on top of **DCC-EX**: a graph-first track designer with exact
+geometry, a server-authoritative simulation of every train (front, rear, facing and movement kept
+strictly apart), a live map, path claiming with dry-runs before anything moves, and an optional
+photo → track-plan import through a local Ollama vision model.
 
 ## Quick start
 
 ```bash
 npm install
-npm run start
+npm run dev        # server (node --watch, TypeScript) + Vite client
+npm run start      # build client, then serve on PORT (default 3000)
+npm test           # Vitest (geometry, orientation, simulation, routing, dispatcher, …)
+npm run typecheck  # tsc for server/shared and client
 ```
 
-- App entry: `node src/index.js` (see `package.json` `main` / `start`).
-- Default HTTP port: `3000` (override with `PORT`).
-- DCC-EX connection: `DCCHost` (default `localhost`), `DCCPort` (default `2560`).
+Requires Node ≥ 24 (TypeScript runs natively, no build step for the server).
 
-Optional:
+- DCC-EX connection: `DCCHost` (default `localhost`), `DCCPort` (default `2560`). Without a
+  command station the app runs in **simulation mode**: trains move virtually and block sensors are
+  derived from the simulated occupancy.
+- Photo import: `OLLAMA_HOST` (default `http://localhost:11434`), `OLLAMA_VISION_MODEL` (default `llava`).
 
-- `DEV_LIVE_RELOAD=1` — reload the page when the Socket.IO connection reconnects (dev helper).
-
-Build Tailwind CSS before or alongside dev:
-
-- `npm run build:css` — one-off build to `public/css/tailwind.css`
-- `npm run dev:css` — watch mode
-
-## Architecture (how to read this repo)
-
-Single process, one main layout:
+## Repository layout
 
 ```
-src/
-├── index.js              # process entry: listen on PORT
-├── app.js                # composition root: boot core → wire adapters
-├── core/                 # always-on domain engine (no HTTP/WS specifics)
-├── adapters/
-│   ├── http/             # Express routers (HTTP API + HTML pages)
-│   └── ws/               # Socket.IO ↔ domain bridge
-├── ui/                   # EJS templates only (views root for Express)
-├── services/             # infrastructure helpers used by core/adapters
-│   ├── dccEx.js          # TCP client to DCC-EX (commands, parsing, state cache)
-│   ├── rollingStock.js   # rolling stock data (filesystem-backed)
-│   └── dataLayer.js      # data dirs bootstrap
-└── socketio.js           # Socket.IO server wrapper
-public/                   # static assets (CSS built from src/styles)
+shared/src/            TypeScript shared by server and client (imported via @shared)
+├── catalog/           track catalogue as data per brand (Märklin C/K/M, Trix C, Roco, PIKO,
+│                      Fleischmann, Peco, Tillig) + electrical/mechanical compatibility
+├── geometry/          exact primitives (line/arc), frames, piece geometry, flex biarc solver,
+│                      nearest-point, sampling (rendering only)
+├── layout/            layout document v3 (Zod), graph-first index (frames derived from joints,
+│                      loop-closure gaps), operations, traversal (advance through turnouts)
+├── domain/            train model (pose, consist, speed model, geometry along the rail), dispatch
+├── events/            Socket.IO payload schemas (client and server share them)
+└── vision/            vision-model output schema + prompt
+
+src/                   Express 5 + Socket.IO server (TypeScript on Node 24)
+├── index.ts, app.ts   composition root: services → core → adapters
+├── core/              dccEngine, trackGraph (graphology), trainState, turnoutState, sensorBus,
+│                      simulation (fixed-step, XState), routePlanner, interlocking, dryRun,
+│                      reconciliation, safety, commandGate, dispatcher, liveService
+├── services/          dccEx (TCP client incl. sensors/turnout feedback), layoutStore, consistStore,
+│                      rollingStock, settingsStore, ollamaVision
+├── adapters/http/     REST routers (layout, consists, live, dispatch, trains, wagons, vision)
+├── adapters/ws/       Socket.IO bridges (dcc:*, live:*)
+└── migrations/        one-time data migrations (dated, removed after two months)
+
+client/src/            React 19 + Vite 8 + Tailwind 4
+├── designer/          Pixi.js plan editor on the shared geometry core (Zustand store,
+│                      TanStack Query persistence, R3F 3D view)
+├── live/              live map: trains as exact bands with a nose arrow, turnouts, occupancy,
+│                      claims, placement mode, driving controls
+├── dispatch/          station dispatch UI (plan → dry-run → claim → run)
+└── pages, components  home cab, rolling stock, settings
 ```
 
-### Folder roles
+## Key concepts
 
-| Path | Role |
-|------|------|
-| **`src/core/`** | **Always-on domain engine.** Today this is mainly `dccEngine.js`: wraps the DCC client, applies startup cab list from rolling stock, exposes commands/status and re-emits domain events. Stays free of Express/Socket.IO imports. |
-| **`src/adapters/http/`** | **Express:** HTTP routes and `res.render()` using EJS. Files like `createWebRouter.js` / `createApiRouter.js` build routers from injected dependencies. |
-| **`src/adapters/ws/`** | **Socket.IO:** maps browser events (`dcc:*`) to the engine and broadcasts engine events to clients (`setupDccWsAdapter.js`). Keeps WebSocket glue out of `core/`. |
-| **`src/ui/`** | **Templates and presentation only** (EJS). Express `views` path points here. Some templates include inline `<script>` for the control panel. **`src/pages/` is not used** — UI lives under `src/ui/`. |
-| **`src/app.js`** | **Startup composition:** create Express app, HTTP server, Socket.IO, construct and **start** the core engine **before** attaching adapters, then mount HTTP + WS. |
+- **Graph-first layout.** Pieces are coupled through explicit joints; every piece frame is derived
+  from its component root, so joints are exact by construction. A loop that does not fit is reported
+  as a measurable mismatch (mm / degrees) instead of being snapped shut; flex rail can be solved
+  (biarc) to close it.
+- **Facing ≠ movement ≠ heading.** A train's physical front, its movement direction (forward /
+  reverse) and the momentary track tangent are separate; reversing never flips the train.
+- **Server is the source of truth.** DCC-EX only actuates (throttles, turnouts) and reports sensors.
+  Poses live on the server (`data/automation/state.json`), occupancy is derived from them, and hardware
+  sensors are reconciled against the estimate (safety levels NORMAL / DEGRADED / EMERGENCY).
+- **Nothing moves without a validated dry-run.** Dispatch jobs plan a route on the directed traversal
+  graph, simulate it on a clone of the live simulation with the same step size, claim the path
+  atomically, set and lock the turnouts, and only then drive through the command gate.
 
-### Mental model
+## Data
 
-```mermaid
-flowchart LR
-  Browser["Browser<br>(EJS + JS)"] --> Adapters["Adapters<br>(HTTP / WS)<br>Socket.IO + Express"]
-  Adapters --> Core["src/core<br>(dccEngine)"] & Browser
-  Core --> DccEx["DCC-EX TCP<br>(dccEx.js)"] & Adapters
-```
-
-## What the app does (function list)
-
-- **Power** — track power on/off; status reflected over Socket.IO.
-- **Throttle** — set speed/direction per cab; emergency stop control path via UI.
-- **Functions** — toggle loco functions; UI syncs with roster selection where implemented.
-- **Rolling stock** — read/write train (and wagon) metadata under `data/rollingstock/`; pages under `/rollingstock`.
-- **Raw DCC-EX** — “test” panel to send raw commands and see replies over the socket.
-- **Realtime** — Socket.IO events for connection state, power, throttle, functions, and raw messages.
-
-This README describes **what exists and how the repo is laid out**. It does **not** maintain a product backlog; track work wherever you prefer (issues, notes, etc.).
-
-## FAQ (from earlier design notes)
-
-- **`src/core/` only has `dccEngine` — is that right?**  
-  Yes, for now. It is the domain shell around the DCC client; add more core modules when you introduce non-trivial rules or state that should not live in adapters.
-
-- **`src/ui/` vs `src/pages/`**  
-  Templates live in **`src/ui/`** only. `app.js` sets `views` to `src/ui`. There is no parallel `src/pages` tree in the current layout.
-
-- **Adapters**  
-  HTTP and WS adapters are intentionally small: they translate HTTP/Socket.IO to engine calls and broadcast engine events outward.
-
-- **`src/app.js`**  
-  This is the single composition root: boot order is **core first**, then wire adapters.
+Everything lives as JSON under `data/`: `layout.json` (v3), `consists/`, `rollingstock/`,
+`automation/state.json` (live poses), `automation/corrections.jsonl` (manual position corrections),
+`settings.json`. A v1 `layout.json` is migrated once at startup (backup kept as `layout.v1.backup.json`).
 
 ## License
 

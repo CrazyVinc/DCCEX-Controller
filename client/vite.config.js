@@ -9,8 +9,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   root: __dirname,
   plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src/designer'),
+      '@shared': path.resolve(__dirname, '../shared/src'),
+    },
+  },
   server: {
     port: 5173,
+    fs: {
+      allow: [path.resolve(__dirname, '..')],
+    },
     proxy: {
       '/api': { target: 'http://localhost:3000', changeOrigin: true },
       '/rollingstock-images': { target: 'http://localhost:3000', changeOrigin: true },

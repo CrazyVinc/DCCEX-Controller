@@ -8,7 +8,7 @@ function parseNum(raw) {
 export function EditWagonDialog({ open, wagon, initialTab = 'details', onClose, onSaved }) {
   const dialogRef = useRef(null);
   const [tab, setTab] = useState('details');
-  const [formValues, setFormValues] = useState({ Name: '', Length: '' });
+  const [formValues, setFormValues] = useState({ Name: '', Length: '', serviceClass: 'other' });
   const [images, setImages] = useState([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
@@ -43,6 +43,7 @@ export function EditWagonDialog({ open, wagon, initialTab = 'details', onClose, 
     setFormValues({
       Name: wagon.Name ?? '',
       Length: String(wagon.Length ?? ''),
+      serviceClass: wagon.serviceClass ?? 'other',
     });
   }, [open, wagon?.id, initialTab]);
 
@@ -157,6 +158,7 @@ export function EditWagonDialog({ open, wagon, initialTab = 'details', onClose, 
     const payload = {
       Name: formValues.Name.trim(),
       Length: parseNum(formValues.Length),
+      serviceClass: formValues.serviceClass,
     };
     const response = await fetch(`/api/wagons/${wagon.id}`, {
       method: 'PUT',
@@ -238,6 +240,18 @@ export function EditWagonDialog({ open, wagon, initialTab = 'details', onClose, 
                   onChange={(event) => setFormValues({ ...formValues, Length: event.target.value })}
                   className="rounded-md border border-slate-700/80 bg-slate-900/40 px-3 py-2 text-sm text-slate-200 focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-400"
                 />
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs uppercase tracking-wide text-slate-400">
+                Service class
+                <select
+                  value={formValues.serviceClass}
+                  onChange={(event) => setFormValues({ ...formValues, serviceClass: event.target.value })}
+                  className="rounded-md border border-slate-700/80 bg-slate-900/40 px-3 py-2 text-sm text-slate-200 focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                >
+                  <option value="passenger">Passenger</option>
+                  <option value="goods">Goods / industry</option>
+                  <option value="other">Other</option>
+                </select>
               </label>
             </div>
           </div>
